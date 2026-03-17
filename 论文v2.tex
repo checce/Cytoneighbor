@@ -1,0 +1,451 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{setspace}
+\doublespacing
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc} % If using pdfLaTeX; omit for XeLaTeX/LuaLaTeX
+\usepackage{lmodern}
+
+
+\usepackage{amsmath}        % 数学公式支持
+\usepackage{amssymb}        % 数学符号支持 (如 \mathbb)
+\usepackage{amsfonts}       % 字体支持
+\usepackage{bm}             % 粗体数学符号
+\usepackage{geometry}       % 页面边距设置
+\usepackage{indentfirst}    % 首行缩进
+\usepackage{url}            % URL支持
+\usepackage{graphicx}       % 图片支持
+\usepackage{booktabs}       % 三线表支持
+
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+
+% 手动定义 \keywords 命令（核心解决代码）
+\newcommand{\keywords}[1]{\par\vspace{6pt}
+  \noindent\textbf{Keywords:}\ #1\par
+}
+
+\usepackage[font=small,labelfont=bf]{caption}
+\captionsetup[figure]{font=small,skip=4pt}
+
+\usepackage{microtype}
+\usepackage[T1]{fontenc}
+
+\setlength{\parindent}{1.5em}
+\setlength{\parskip}{0pt}
+
+% --------------------------------------------------------
+% 正文开始
+% --------------------------------------------------------
+\begin{document}
+
+% 标题页信息 (模拟)
+\title{Cytoneighbor: relational neighborhood learning for single-cell annotation, integration and disease-state mapping}
+
+\author{Author1$^{1, \ast}$\\
+    Author2$^{1}$ \\
+    Author3$^{2}$
+}
+\date{March 15, 2026}
+
+\maketitle
+
+\begin{abstract}
+Resolving cellular diversity across tissues, physiological states and disease remains a central goal of single-cell analysis, yet existing methods can lose fine biological structure when integrating heterogeneous datasets or transferring labels under incomplete reference coverage. Here we present \textbf{Cytoneighbor}, a relational neighborhood learning framework that models cellular identity through pairwise transcriptomic relationships rather than absolute latent coordinates. Cytoneighbor combines a symmetric relation encoder for cell--cell similarity scoring with Gene-CutMix, a training-time augmentation module designed to stabilize learning in sparsely sampled regions of the manifold. In leave-one-batch-out annotation benchmarks and targeted stress tests, Cytoneighbor showed more robust behavior in settings with batch variation, subtle subtype boundaries and partially represented query states. In an extreme scarcity setting, Gene-CutMix increased retrieval of held-out rare cells by improving local neighborhood support. In diabetic kidney disease, mapping healthy and diseased proximal-tubule cells into a joint relational manifold preserved zonation structure and supported topology-aware interpretation of injury-associated remodeling and state-specific responses. Together, these findings suggest that relational neighborhood learning is a useful framework for single-cell annotation, integration and disease-state analysis in the tested heterogeneous settings.
+\end{abstract}
+
+
+\keywords{single-cell RNA sequencing, relational neighborhood learning, cell--cell similarity, batch integration, cell-type annotation, incomplete-reference transfer, rare-cell recovery, diabetic kidney disease}
+
+
+
+\section{Introduction}
+
+Resolving how cellular diversity is organized across tissues, physiological states and disease is a central goal of modern biology. Single-cell RNA sequencing (scRNA-seq) has transformed this effort by enabling cell states to be profiled at scale and compared across organs, individuals and studies, thereby advancing community efforts such as the Human Cell Atlas \cite{Regev2017HCA}. Yet the value of these datasets depends not only on measuring gene expression in individual cells, but also on reconstructing how cells relate to one another. Whether the task is cell-type annotation, trajectory analysis, cross-condition mapping or atlas integration, downstream interpretation depends on an estimate of transcriptomic similarity and local neighborhood structure \cite{Luecken2019BestPractices}. In this sense, many single-cell analyses can be viewed as problems of recovering biological relationships from noisy, high-dimensional observations.
+
+This problem becomes particularly challenging when datasets are combined across donors, platforms and laboratories. In such settings, technical variation can obscure the subtle transcriptomic differences that distinguish closely related cell states, rare populations and condition-specific responses \cite{Korsunsky2019Harmony,Luecken2022BenchmarkingIntegration}. Existing computational frameworks, including scVI \cite{Lopez2018scVI}, Seurat \cite{Stuart2019Seurat,Hao2021Multimodal} and Harmony \cite{Korsunsky2019Harmony}, have been highly effective for many atlas-building tasks, but most operate within a common paradigm: cells are projected into a latent coordinate space and then aligned, clustered or classified in that space. This strategy has clear practical advantages, yet it also introduces a recurrent tension. Methods that strongly improve batch mixing may weaken local biological structure, whereas methods that preserve fine resolution often do so at the cost of incomplete integration \cite{Korsunsky2019Harmony,Luecken2022BenchmarkingIntegration}. As a result, many single-cell workflows face a recurring trade-off between global alignment and local biological fidelity.
+
+A related limitation arises in annotation and reference mapping. Most classifiers and integration pipelines assume that every query cell can be assigned to one of the identities already represented in the reference \cite{Abdelaal2019ComparisonAnnotation,Pasquini2021AnnotationReview}. In practice, however, biological datasets often contain incompletely sampled, shifted or previously unobserved states. Under these conditions, coordinate-based approaches may still force query cells into nearby reference classes, yielding biologically unsupported assignments when appropriate reference anchors are weak or absent \cite{Abdelaal2019ComparisonAnnotation,Pasquini2021AnnotationReview,Luecken2022BenchmarkingIntegration}. This issue becomes particularly consequential in translational and disease settings, in which the most informative cells may be precisely those that are rare, stressed or incompletely represented in available references. Together, these challenges suggest that progress may require not only stronger batch correction or more expressive classifiers, but also a representation of cellular identity that is more sensitive to local relational structure.
+
+Here we hypothesized that, in many settings, cellular identity may be better captured by relational context than by absolute position in a learned coordinate space. Building on this idea, we developed \textbf{Cytoneighbor}, a framework for relational neighborhood learning in single-cell transcriptomic data. Rather than learning cell identity solely as a point embedding, Cytoneighbor estimates transcriptomic similarity directly between cell pairs and reconstructs a relational adjacency graph that supports annotation, integration and downstream biological interpretation. The framework includes a \emph{Symmetric Relation Encoder} (SymRelEnc), which learns pairwise transcriptomic relationships from differential representations, and a training-time augmentation strategy, \emph{Gene-CutMix}, which stabilizes learning in sparsely sampled regions of the manifold. By focusing on relative transcriptomic support, Cytoneighbor was developed to preserve fine biological structure while remaining robust to technical variation and incomplete reference coverage.
+
+We therefore frame Cytoneighbor not simply as an annotation model, but as a relational neighborhood learning framework for label transfer, graph reconstruction and topology-aware biological analysis. We evaluated Cytoneighbor across a series of settings chosen to test these properties explicitly. In leave-one-batch-out annotation benchmarks, Cytoneighbor improved robustness in batches containing rare, shifted or incompletely represented cell states. In integration analyses across multiple tissues, it preserved biological structure while maintaining substantial cross-batch mixing. In a stringent immune-cell resolution benchmark, the method retained fine subtype topology at the difficult NK--NKT boundary. Under extreme rarity, Gene-CutMix improved recovery of held-out cells by stabilizing local neighborhood structure. Finally, in diabetic kidney disease, a joint healthy--diseased relational manifold preserved proximal tubule zonation and enabled topology-aware interpretation of injury-associated remodeling. Together, these results suggest that relational neighborhood learning provides a useful alternative to purely coordinate-based representations for analyzing increasingly heterogeneous single-cell datasets.
+
+
+\section{Results}
+
+\subsection{Workflow}
+
+To address annotation and neighborhood reconstruction in large heterogeneous single-cell datasets, we developed \textbf{Cytoneighbor}, a relational learning framework that models transcriptomic similarity directly between cells rather than relying only on fixed cell-wise embeddings (Fig.~\ref{fig:workflow}). The workflow is designed to preserve subtle biological structure while remaining robust to batch-associated variation, and to support both annotation and topology-aware downstream analyses.
+
+The workflow begins with standard preprocessing of single-cell RNA-sequencing data, including quality-control filtering, library-size normalization and log-transformation (Fig.~\ref{fig:workflow}, left). During preprocessing, lineage-relevant markers can be retained when feature selection is used, reducing the risk that sparsely detected but biologically informative genes are discarded. These processed expression profiles are then used to construct pairwise differential representations, allowing the model to learn from relative transcriptomic relationships rather than absolute expression magnitudes alone.
+
+These pairwise features are scored by the \textbf{Symmetric Relation Encoder (SymRelEnc)}, which estimates transcriptomic similarity between cell pairs (Fig.~\ref{fig:workflow}). During training, Cytoneighbor combines supervised pairwise discrimination with rank-based constraints to encourage separation of distinct cellular identities while preserving local transcriptomic continuity. To improve robustness in sparsely sampled regions of the manifold, the framework further incorporates \textit{Gene-CutMix}, which generates synthetic intermediate profiles from related cells during training. This augmentation is intended to stabilize neighborhood learning when rare populations or transitional states are underrepresented.
+
+For scalable inference, Cytoneighbor uses a coarse-to-fine strategy (Fig.~\ref{fig:workflow}). Candidate neighbors are first retrieved by approximate nearest-neighbor search after random projection, and are then re-scored by SymRelEnc to reconstruct a refined relational adjacency graph. This graph serves as the basis for downstream analyses, including cell-type annotation, manifold reconstruction and joint analysis across biological conditions. In this study, we use this workflow as the common backbone for the benchmark, mechanism and disease-mapping analyses below.
+
+\begin{figure}[htpb]
+    \centering
+    \includegraphics[width=1\linewidth]{Figure1_Workflow.pdf}
+    \caption{\textbf{Cytoneighbor workflow for relational reconstruction of cellular neighborhoods.}
+    Single-cell expression profiles are preprocessed and converted into pairwise differential representations, which are scored by the Symmetric Relation Encoder (SymRelEnc). During training, Gene-CutMix augments sparsely sampled regions of the manifold by generating synthetic intermediate profiles from biologically compatible cells. During inference, approximate nearest-neighbor retrieval is followed by relational re-scoring to produce a refined adjacency graph, which supports downstream tasks including cell-type annotation, manifold reconstruction and joint analysis across biological conditions.}
+    \label{fig:workflow}
+\end{figure}
+
+
+\subsection{Cytoneighbor improves annotation robustness under incomplete reference coverage and challenging transfer settings}
+
+We first asked whether relational inference improves annotation reliability when query batches contain states that are incompletely represented in the reference. To address this question, we performed a leave-one-batch-out (LOBO) benchmark across multiple datasets and summarized performance with metrics that distinguish global classification performance from behavior in more challenging transfer settings (Fig.~\ref{fig:annotation_ood}). In this benchmark, query cell types absent from the corresponding reference fold were remapped in the ground truth to an \textit{Unknown} category for evaluation, thereby penalizing unsupported forced assignments without requiring every compared method to implement an explicit rejection mechanism.
+
+Across all folds, several strong baseline classifiers achieved high global accuracy and Macro-F1, indicating that many common cell states were recoverable by conventional closed-set models (Fig.~\ref{fig:annotation_ood}A,E). Cytoneighbor was competitive in these global summaries, but its clearest advantage emerged in batches enriched for rare or distribution-shifted populations (Fig.~\ref{fig:annotation_ood}C). In particular, in the Pancreas \textit{Smarter} batch and the Human Immune \textit{Villani} batch, where rare endocrine populations or pronounced technical deviation posed a substantial challenge, Cytoneighbor retained stronger Macro-F1 than several reference-mapping and deep generative baselines \cite{Segerstolpe2016Pancreas,Xin2016Pancreas,Lawlor2017Pancreas,Villani2017Immune}.
+
+This difference was consistent with the behavior expected from a relational framework under incomplete reference coverage. Conventional closed-set classifiers tend to assign every query cell to one of the reference labels, even when transcriptomic support is weak. By contrast, Cytoneighbor evaluates local relational support between query and reference cells and was correspondingly less affected by unsupported assignments when query states lacked appropriate reference anchors (Fig.~\ref{fig:annotation_ood}D). Accordingly, the framework was less prone to the specific failure mode in which poorly supported query cells are absorbed into nearby known classes.
+
+These results indicate that the principal advantage of Cytoneighbor does not lie in uniformly dominating global summary metrics, but in improving annotation reliability when rare, shifted or incompletely represented cell states are encountered. In this LOBO setting, that behavior is particularly relevant for atlas extension and clinical datasets, where the assumption that all query identities are already represented in the reference is often violated.
+
+To quantify whether this advantage was stable across datasets and folds, we further summarized paired fold-level contrasts (Cytoneighbor versus each baseline) using a hierarchical random-effects model (Methods). In this synthesis, pooled effects for the primary open-set stress metrics were directionally favorable for Cytoneighbor, with corresponding 95\% confidence intervals, BH-FDR-adjusted significance, and leave-one-dataset-out (LODO) sensitivity analyses reported in Fig.~\ref{fig:annotation_ood}F and Supplementary Fig.~S1 and Supplementary Table~S1. Several primary contrasts remained supported after multiple-testing correction, whereas others were directionally consistent but uncertain. These inferential results apply to the tested LOBO benchmark configuration.
+
+\begin{figure}[htpb]
+    \centering
+    \includegraphics[width=1\linewidth]{Figure2_Annotation_Benchmarking.pdf}
+    \caption{\textbf{Relational inference improves annotation robustness under incomplete reference coverage and challenging transfer settings.}
+    \textbf{(A)} Distribution of Macro-F1 scores across leave-one-batch-out (LOBO) evaluation folds for 14 annotation methods; red lines indicate medians.
+    \textbf{(B)} Joint comparison of global classification accuracy and Macro-F1, illustrating the distinction between overall assignment performance and behavior in more challenging transfer settings.
+    \textbf{(C)} Stress-test evaluation on batches enriched for rare cell populations or pronounced technical deviation, including the Pancreas \textit{Smarter} batch and the Human Immune \textit{Villani} batch.
+    \textbf{(D)} Schematic comparison of annotation behavior under incomplete reference coverage. Closed-set classifiers force all query cells into known labels, whereas Cytoneighbor evaluates local relational support and is therefore less vulnerable to unsupported assignments when appropriate reference anchors are absent.
+    \textbf{(E)} Heat map summarizing multiple classification metrics across leading methods; scores were min--max scaled within each metric for visualization.
+    \textbf{(F)} Hierarchical random-effects synthesis of cross-dataset/cross-fold annotation contrasts, reporting pooled effect sizes with 95\% confidence intervals, BH-FDR-adjusted $q$ values, and LODO sensitivity summaries for primary open-set metrics.}
+    \label{fig:annotation_ood}
+\end{figure}
+
+
+\subsection{Cytoneighbor preserves biological structure while achieving effective batch integration}
+
+We next asked whether Cytoneighbor could integrate batches without eroding fine-grained biological structure. Because the method reconstructs a relational neighborhood graph rather than directly optimizing a low-dimensional coordinate system, we evaluated integration using complementary metrics of batch mixing and biological conservation, together with qualitative inspection of neighborhood topology (Fig.~\ref{fig:integration_tradeoff}).
+
+In the unintegrated Human Immune dataset, cells were strongly partitioned by batch (Fig.~\ref{fig:integration_tradeoff}A). Harmony and scVI increased batch mixing, accompanied by weaker preservation of local subtype structure in the visualization and by lower biological-conservation metrics than Cytoneighbor. By contrast, Cytoneighbor preserved sharper local boundaries while still allowing cells from different batches to intermingle within shared biological neighborhoods (Fig.~\ref{fig:integration_tradeoff}A). The resulting representation therefore retained recognizable cell-type structure without reverting to a strongly batch-segregated manifold.
+
+This trend was also reflected quantitatively across the Human Immune, Pancreas and Diabetic Kidney Disease datasets (Fig.~\ref{fig:integration_tradeoff}B--E). Cytoneighbor did not maximize iLISI, indicating that it was not the most aggressive batch-mixing method. However, in these datasets it showed the strongest biological conservation by NMI and ARI, and favorable cLISI values, particularly in Pancreas and Diabetic Kidney Disease. By contrast, methods with the highest iLISI values generally showed weaker preservation of biological identity, consistent with over-correction \cite{Korsunsky2019Harmony,HubertArabie1985ARI,Vinh2010NMI,Sokolova2009PerformanceMeasures}.
+
+Together, these results place Cytoneighbor in a favorable region of the integration--conservation landscape in the tested benchmarks: it preserves cell identity more effectively than more aggressive integration methods while still achieving substantial cross-batch mixing. Relational neighborhood learning therefore provides an alternative route to integration in which biological structure is treated as a primary objective rather than as a secondary consequence of batch alignment.
+
+Using the same inferential framework as above, we synthesized cross-dataset/cross-fold paired contrasts for iLISI, cLISI, NMI and ARI. Pooled effect estimates were consistent with stronger biological conservation (NMI/ARI) and favorable cLISI behavior under Cytoneighbor, while iLISI differences reflected a less aggressive mixing strategy in the tested settings. We report effect sizes, 95\% confidence intervals, BH-FDR-adjusted $q$ values, and heterogeneity diagnostics in Fig.~\ref{fig:integration_tradeoff}E and Supplementary Fig.~S2 and Supplementary Table~S2. These analyses quantify the integration--resolution trade-off without introducing a separate results subsection.
+
+\begin{figure}[htpb]
+    \centering
+    \includegraphics[width=1\linewidth]{Figure3_Integration_Composite.pdf}
+    \caption{\textbf{Cytoneighbor preserves biological structure while achieving effective batch integration.}
+    \textbf{(A)} UMAP projections of the Human Immune dataset before integration and after integration with Harmony, scVI, BBKNN and Cytoneighbor. Cells are colored by batch (left) or cell type (right). Cytoneighbor preserves local biological boundaries while allowing substantial batch mixing within shared neighborhoods.
+    \textbf{(B--D)} Quantitative comparison across \textbf{(B)} Human Immune, \textbf{(C)} Pancreas and \textbf{(D)} Diabetic Kidney Disease. The x axis shows batch mixing (iLISI) and the y axis shows biological conservation (NMI).
+    \textbf{(E)} Summary of integration metrics across the three datasets, including iLISI, cLISI, NMI and ARI, augmented with pooled effect sizes, 95\% confidence intervals and BH-FDR-adjusted $q$ values for cross-dataset/cross-fold contrasts.}
+    \label{fig:integration_tradeoff}
+\end{figure}
+
+
+\subsection{Relational learning resolves fine subtype structure at the limits of immune-cell discrimination}
+
+To test whether Cytoneighbor could preserve subtle subtype structure without oversmoothing, we designed a resolution stress test in the Human Immune dataset spanning a difficulty gradient from CD4$^{+}$ T cells and CD8$^{+}$ T cells to NK and NKT cells (Fig.~\ref{fig:resolution_stress}). This benchmark was intended to probe not only categorical accuracy, but also whether local topology remained biologically plausible at increasingly difficult subtype boundaries.
+
+The clearest contrast emerged at the NK--NKT interface. Harmony produced the strongest batch mixing, but substantially blurred subtype structure, consistent with oversmoothing of fine immune identities (Fig.~\ref{fig:resolution_stress}A,B). Seurat retained stronger categorical separation overall, yet introduced a more fragmented topology around the NK--NKT transition. By contrast, Cytoneighbor preserved a more coherent local neighborhood structure while maintaining comparatively strong specificity at this difficult boundary.
+
+This distinction was reflected in classification behavior. In the NKT classification task, Cytoneighbor showed the lowest misclassification of NKT cells into the closely related NK and CD8 classes, with the dominant residual error involving NK (Fig.~\ref{fig:resolution_stress}C,E). 
+Across the full difficulty gradient, Cytoneighbor did not exhibit the smallest decline in F1 score from easier to harder tasks (Fig.~\ref{fig:resolution_stress}F). Its clearest advantage instead lay in preserving local subtype structure at the NK--NKT boundary while reducing misclassification of NKT cells into closely related NK and CD8 classes.
+
+We did observe less complete separation between CD4$^{+}$ and CD8$^{+}$ T cells than in some clustering-oriented pipelines. However, this effect was lineage-restricted and did not resemble the broader oversmoothing observed in more aggressively integrated representations. Overall, these analyses indicate that Cytoneighbor can preserve fine-scale immune topology while maintaining discriminative performance at one of the most challenging subtype boundaries in this dataset.
+
+% \begin{figure}[htpb]
+%     \centering
+%     \includegraphics[width=1\linewidth]{figure4.pdf}
+%     \caption{\textbf{Resolution stress testing reveals improved preservation of fine immune-cell topology.}
+%     \textbf{(A)} Global UMAP projections of the Human Immune dataset generated from Cytoneighbor, scVI, Seurat and Harmony representations. Harmony increases batch mixing but weakens fine subtype structure, whereas Cytoneighbor preserves local biological organization.
+%     \textbf{(B)} Enlarged views of the NK--NKT region. Cytoneighbor preserves a more coherent local neighborhood structure, whereas Seurat shows a more fragmented topology and Harmony shows greater oversmoothing.
+%     \textbf{(C)} Confusion matrices comparing classification behavior across CD4$^{+}$ T cells, CD8$^{+}$ T cells, NK cells and NKT cells.
+%     \textbf{(D)} Per-class F1 scores across the difficulty gradient from CD4$^{+}$ T cells to NKT cells.
+%     \textbf{(E)} Misclassification rates of NKT cells into the closely related NK and CD8 classes.
+%     \textbf{(F)} Decrease in F1 score from the easiest to the hardest task, summarizing robustness across the resolution gradient.}
+%     \label{fig:resolution_stress}
+% \end{figure}
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=1\linewidth]{figure4.pdf}
+    \caption{\textbf{Resolution stress testing reveals improved preservation of fine immune-cell topology.}
+    \textbf{(A)} Global UMAP projections of the Human Immune dataset generated from Cytoneighbor, scVI, Seurat and Harmony representations.
+    \textbf{(B)} Enlarged views of the NK--NKT region.
+    \textbf{(C)} Confusion matrices across CD4$^{+}$ T cells, CD8$^{+}$ T cells, NK cells and NKT cells.
+    \textbf{(D)} Per-class F1 scores across the difficulty gradient.
+    \textbf{(E)} Misclassification rates of NKT cells into NK and CD8 classes.
+    \textbf{(F)} Decrease in F1 score from the easiest to the hardest task.}
+    \label{fig:resolution_stress}
+\end{figure}
+
+
+\subsection{Gene-CutMix improves rare-cell recovery by repairing sparsely sampled manifolds}
+
+Rare cell populations are particularly vulnerable to manifold fragmentation because only a small number of reference anchors are available to define their local neighborhoods. We therefore asked whether Gene-CutMix improves neighborhood recovery under an extreme scarcity regime. To do so, we constructed a held-out evaluation in the Pancreas dataset in which delta cells were aggressively downsampled in the reference while a large set of held-out delta cells was retained for retrieval testing (Fig.~\ref{fig:mechanism}).
+
+Without Gene-CutMix, the rare-cell manifold appeared fragmented and locally sparse, and recall of held-out delta cells was limited, particularly at small neighborhood sizes (Fig.~\ref{fig:mechanism}A,C). Enabling Gene-CutMix increased Recall@$K$ across the full range of tested neighborhood sizes, including a marked improvement at $K=5$ (Fig.~\ref{fig:mechanism}C,D). Because retrieval was evaluated against real reference cells, this gain reflects improved neighborhood recovery rather than a trivial increase in candidate support from synthetic points alone.
+
+The corresponding relational UMAP suggested a change in local manifold geometry. In the absence of Gene-CutMix, the remaining rare delta cells appeared as fragmented islands. With Gene-CutMix enabled, training-time synthetic profiles were positioned in sparsely sampled regions surrounding these islands, coinciding with a denser local configuration without obvious expansion into major non-delta lineages (Fig.~\ref{fig:mechanism}A,B). Under this extreme setting, coarse graph-level connectivity metrics were less informative than retrieval-based measures of local recovery.
+
+These results support Gene-CutMix as a mechanism for stabilizing neighborhood learning in sparsely sampled regions of the manifold. In this extreme scarcity benchmark, improving local support around rare populations increased recovery of held-out cells without obvious disruption of the broader organization of the reference atlas.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1\linewidth]{figure5_mechanism_A4_landscape.pdf}
+    \caption{\textbf{Gene-CutMix improves rare-cell recovery under extreme scarcity.}
+    \textbf{(A)} Relational UMAP of the reference manifold after severe downsampling of delta cells, showing fragmentation of the rare-cell neighborhood when Gene-CutMix is disabled.
+    \textbf{(B)} Corresponding manifold when Gene-CutMix is enabled. Training-time synthetic profiles (gold triangles) densify the local neighborhood around rare delta cells without obvious expansion into major non-delta lineages.
+    \textbf{(C)} Recall@K for held-out delta-cell retrieval across a range of neighborhood sizes. Gene-CutMix improves recovery consistently across the tested neighborhood range.
+    \textbf{(D)} Relative improvement in held-out delta-cell retrieval as a function of neighborhood size, highlighting the strongest gain at small \(K\).}
+    \label{fig:mechanism}
+\end{figure}
+
+
+\subsection{A joint relational manifold preserves proximal-tubule zonation and reveals convergent injury-associated remodeling in diabetic kidney disease}
+
+We next examined whether Cytoneighbor could support disease-state analysis without obscuring anatomical structure. To this end, we used a healthy reference to define a relational metric and then mapped healthy and diabetic kidney disease (DKD) proximal tubule (PT) cells into a joint manifold (Fig.~\ref{fig:dkd_zonation}). This strategy was designed to test whether disease-associated transcriptomic change could be interpreted while retaining the underlying zonation of the PT epithelium.
+
+The joint graph resolved three principal PT states. Two clusters were enriched for healthy cells and served as reference-like functional states, whereas a third cluster contained a larger fraction of DKD cells and corresponded to an injured PT state (Fig.~\ref{fig:dkd_zonation}A,B). Root selection was based on healthy-cell abundance rather than marker-based preassignment, thereby reducing circularity in subsequent interpretation. Independent marker analysis supported anatomical zonation within the healthy-enriched states: \textit{SLC5A1} was enriched in the S3-like cluster, whereas \textit{SLC5A2} and related transport programs were stronger in the S1/S2-like state (Fig.~\ref{fig:dkd_zonation}C)\cite{Muto2021Kidney,Limbutara2020ProteomicsTubule}. These results indicate that Cytoneighbor preserves PT segmental structure in the joint healthy--diseased manifold.
+
+We then asked how these segmentally distinct states were related to the injured PT population. PAGA analysis of the joint graph supported a convergent topology in which both functional PT states connected to a shared injured state rather than forming a simple linear progression (Fig.~\ref{fig:dkd_progression}A) \cite{Wolf2019PAGA}. Along rank-transformed diffusion pseudotime, used here as an approximate ordering of the convergent manifold, canonical epithelial transport markers such as \textit{SLC5A2} and \textit{LRP2} declined, whereas injury-associated markers including \textit{VCAM1} and \textit{HAVCR1} increased toward the injured terminus (Fig.~\ref{fig:dkd_progression}D) \cite{Haghverdi2016DPT,Wilson2022DKD,Wu2022SGLT2iDKD}. Consistently, state-level marker summaries and Gene Ontology analysis showed reduced epithelial functional programs together with enrichment of extracellular matrix organization and collagen-associated processes in injured PT cells (Fig.~\ref{fig:dkd_progression}B,C) \cite{Kuppe2021KidneyFibrosis,Li2022KidneyFibrosisInjury,Lake2023KidneyAtlas}. Taken together, these analyses support a topology that is consistent with convergent injury-associated remodeling, in which anatomically distinct PT states become organized around a shared injured-state program.
+
+Finally, to distinguish cell-intrinsic disease responses from shifts in segmental composition, we performed within-cluster comparisons of healthy and diseased cells. Although global pseudotime trends showed progressive decline of \textit{SLC5A2}, DKD cells within the S1/S2-like cluster showed higher \textit{SLC5A2} expression than their healthy counterparts (Fig.~\ref{fig:dkd_progression}E). This result indicates that compositional averaging can obscure localized disease responses and illustrates how anatomically anchored relational mapping can separate global injury-associated trends from state-specific transcriptional responses. Thus, beyond annotation and integration, Cytoneighbor supports topology-aware interpretation of disease-associated remodeling in this setting.
+
+To provide an orthogonal validation layer, we projected pre-defined PT-state signatures into an independent external DKD cohort and evaluated the same hypotheses without refitting state definitions. In the tested cohorts, three evidence layers were consistent with the discovery analysis: topology-level support for a shared injury-adjacent PT state, replication of the transport-to-injury expression axis (including state-aware \textit{SLC5A2} behavior), and concordant pathway-level enrichment of extracellular matrix programs (Fig.~\ref{fig:dkd_progression}F; Supplementary Fig.~S4; Supplementary Table~S3). For each layer, we report donor-aware effect sizes, 95\% confidence intervals, and BH-FDR-adjusted $q$ values. These results provide external computational support for the DKD remodeling model in the tested settings, while mechanistic causality remains to be validated by orthogonal experimental assays.
+
+\begin{figure}[htpb]
+    \centering
+    \includegraphics[width=\textwidth]{Figure6_fina.pdf}
+    \caption{\textbf{Joint relational mapping preserves proximal-tubule zonation in diabetic kidney disease.}
+    \textbf{(A)} UMAP projections of the joint healthy--DKD proximal-tubule manifold, colored by Leiden cluster, inferred biological state, sample origin and approximate diffusion pseudotime.
+    \textbf{(B)} Cell-of-origin composition of the identified proximal-tubule states, showing that the two functional states are predominantly composed of healthy reference cells and can therefore serve as topological anchors.
+    \textbf{(C)} Marker-based validation of zonation. \textit{SLC5A1} is enriched in the S3-like state, whereas \textit{SLC5A2} remains strongest in the S1/S2-like state and declines toward the injured PT state.}
+    \label{fig:dkd_zonation}
+\end{figure}
+
+\begin{figure*}[htpb]
+    \centering
+    \includegraphics[width=\textwidth]{Figure7_layout_reoptimized.pdf}
+    \caption{\textbf{Convergent injury-associated remodeling and state-specific transcriptional responses during DKD progression.}
+    \textbf{(A)} PAGA-inferred topological connectivity of the three proximal-tubule states, showing that both functional proximal-tubule states connect to a shared injured state.
+    \textbf{(B)} Heat map summarizing functional and injury marker scores across the three proximal-tubule states.
+    \textbf{(C)} Gene Ontology biological process enrichment comparing the S1/S2-like functional state and the injured proximal-tubule state, highlighting extracellular matrix organization and collagen-associated programs in injured cells.
+    \textbf{(D)} Gaussian-smoothed marker dynamics along rank-transformed diffusion pseudotime, showing progressive loss of epithelial transport markers and increasing expression of injury-associated genes.
+    \textbf{(E)} Within-cluster comparison of \textit{SLC5A2} expression between healthy and diseased cells, revealing state-specific differences that are obscured in global analyses.
+    \textbf{(F)} Orthogonal validation in an independent DKD cohort, summarizing topology replication, key expression-axis replication (including \textit{SLC5A2}), and pathway-level concordance with effect sizes, 95\% confidence intervals, and BH-FDR-adjusted $q$ values.}
+    \label{fig:dkd_progression}
+\end{figure*}
+
+
+
+\section{Discussion}
+
+Single-cell transcriptomics has greatly expanded the resolution at which tissue organization and cellular heterogeneity can be studied, yet two practical challenges remain persistent. First, methods that strongly align batches can blur fine-grained biological structure; second, annotation pipelines commonly assume that all query cells belong to reference-defined classes, which can lead to unsupported or overconfident assignments when rare, shifted or incompletely represented states are encountered. In this study, we developed Cytoneighbor to address these challenges through relational learning. Rather than defining cellular identity primarily through fixed coordinate embeddings, Cytoneighbor evaluates transcriptomic relationships between cells and reconstructs a relational neighborhood graph for annotation, integration and topology-aware interpretation.
+
+A central observation from our benchmarking is that strong global alignment does not necessarily imply faithful biological reconstruction. In the integration setting, methods such as Harmony and scVI achieved high batch-mixing scores, but this was often accompanied by weaker preservation of biological structure, particularly in settings involving closely related populations. By contrast, Cytoneighbor more consistently preserved biological structure while still achieving substantial cross-batch mixing. We therefore interpret Cytoneighbor not as a method that maximizes mixing per se, but as one that prioritizes biologically coherent neighborhood reconstruction under batch variation. This distinction is important because, in many atlas and translational settings, the practical objective is not simply to erase batch effects, but to retain local cellular structure while reducing technical separation.
+
+The annotation results point to a related issue. In leave-one-batch-out and stress-test settings, several closed-set classifiers performed strongly in global summaries, indicating that common cell identities were recoverable by a range of existing approaches. However, Cytoneighbor showed its clearest advantage when query batches contained rare populations, substantial technical shift or incompletely represented states. This pattern is consistent with the behavior expected from a relational framework under incomplete reference coverage: when nearby reference anchors are weak or absent, Cytoneighbor was correspondingly less affected by unsupported assignments. Accordingly, the principal contribution of Cytoneighbor in this context is not that it uniformly dominates all conventional classification metrics, but that it improves annotation reliability under conditions in which the closed-set assumption becomes fragile.
+
+The immune-cell resolution benchmark further illustrates the biological implications of this design. At the difficult NK--NKT boundary, Cytoneighbor showed lower misclassification of NKT cells into the closely related NK class while preserving a more coherent local neighborhood structure. This combination suggests that relational learning can retain fine subtype structure without requiring aggressive smoothing or overly discrete partitioning. We also observed less complete separation between CD4$^{+}$ and CD8$^{+}$ T cells than in some clustering-oriented pipelines. At present, we interpret this pattern cautiously. It may reflect, at least in part, a combination of technical sparsity in lineage-defining markers and genuine functional convergence among activated T-cell states, rather than a purely artifactual failure of separation \cite{Juno2017CytotoxicCD4,SanchezMartinez2019CD4CTL}. More broadly, these findings suggest that relational neighborhood learning may be especially useful in contexts where biologically meaningful continua coexist with sharp local decision boundaries.
+
+Our mechanism analysis supports a similar interpretation for rare populations. Under extreme scarcity, reference manifolds become locally unstable because only a small number of anchors are available to define neighborhood structure. In this setting, Gene-CutMix improved held-out rare-cell recovery in a manner consistent with stabilization of the local rare-cell neighborhood. These observations support the view that Gene-CutMix acts as a training-time manifold stabilizer in sparsely sampled regions. Importantly, we do not interpret the synthetic profiles themselves as direct evidence of real biological intermediate states. Rather, they provide additional relational support that can help the model learn more coherent neighborhoods when transitional or rare populations are poorly sampled. Future work combining richer time-resolved or lineage-resolved data could test whether similar intermediate structures are present \textit{in vivo}.
+
+The disease-mapping results highlight a further advantage of the relational framework: it supports biological interpretation even when compositional shifts and anatomical heterogeneity coexist. In DKD, mapping diseased proximal tubule cells into a healthy-defined relational manifold preserved S1/S2-like and S3-like structure while simultaneously revealing a shared injured state \cite{Muto2021Kidney,Wilson2022DKD,Chen2023DKDSpatial,Lake2023KidneyAtlas}. This organization supported two interpretations that are difficult to obtain from unstratified analyses. First, the joint topology was more consistent with convergent injury-associated remodeling than with a single linear progression. Second, within-cluster comparisons revealed state-specific \textit{SLC5A2} behavior that was obscured by global averaging \cite{Wu2022SGLT2iDKD,Li2022KidneyFibrosisInjury,Gerhardt2021PTStates}. We therefore view the DKD analysis as an example of how anatomically anchored relational mapping can help separate cell-intrinsic transcriptional responses from shifts in population composition.
+
+At the same time, several limitations should be considered. Computationally, pairwise relational scoring is more demanding than strictly linear or cell-wise models. Although candidate retrieval substantially reduces the cost of exhaustive comparison, memory and runtime may still become limiting in atlases containing millions of cells. Methodologically, some graph-level statistics were less informative under extreme anchor scarcity because coarse topological summaries can saturate when very few rare reference cells remain. Biologically, the DKD analysis is based on scRNA-seq and graph inference, neither of which provides direct spatial or lineage information. As a result, the inferred topology should be interpreted as a model of transcriptional organization rather than a definitive reconstruction of \textit{in vivo} cell-fate trajectories. Likewise, the segment-specific hypotheses raised by the proximal tubule analysis will require orthogonal validation in spatial, temporal or lineage-resolved datasets. In addition, the current annotation benchmark evaluates robustness under incomplete reference coverage, but does not establish Cytoneighbor as a fully calibrated unknown-detection framework.
+
+Several future directions follow naturally from this work. On the computational side, sparse approximation, graph subsampling and hierarchical retrieval schemes may further extend the framework to larger atlases. On the biological side, the relational formulation may be well suited to multimodal and spatial transcriptomic settings, in which transcriptional similarity and physical neighborhood structure could be modeled jointly \cite{Heumos2023BestPractices,Hao2021Multimodal,Lake2023KidneyAtlas}. More generally, the present results suggest that relational neighborhood learning offers a useful alternative to methods that rely primarily on global coordinate alignment. By focusing on neighborhood structure, Cytoneighbor may be especially useful when cell identities are rare, transitional or incompletely represented.
+
+In summary, Cytoneighbor provides a relational neighborhood learning framework for single-cell analysis. Across benchmarking, mechanism analysis and disease mapping in this study, the framework improved robustness in incomplete-reference annotation settings, preserved biological structure during integration, stabilized rare-cell neighborhoods under extreme scarcity and supported topology-aware interpretation of disease-associated remodeling. These findings suggest that relational inference can be a practical basis for analyzing increasingly heterogeneous single-cell datasets while preserving biologically meaningful neighborhood structure.
+
+
+\section{Conclusion}
+
+We developed Cytoneighbor, a relational neighborhood learning framework for single-cell analysis that models cellular identity through pairwise transcriptomic relationships rather than absolute latent coordinates. Across annotation, integration, rare-cell recovery and disease-state mapping in the tested settings, Cytoneighbor improved reconstruction of biologically informative cellular neighborhoods, particularly in settings involving batch variation, incomplete reference coverage and subtle state transitions.
+
+These results support a broader conclusion: in heterogeneous single-cell datasets, preserving local relational structure can provide a robust basis for analysis beyond global coordinate alignment alone. By enabling topology-aware annotation and joint manifold analysis, Cytoneighbor extends single-cell mapping beyond label transfer toward more interpretable reconstruction of cellular organization across conditions.
+
+Taken together, our study supports relational neighborhood learning as a practical framework for single-cell transcriptomic analysis and motivates future extensions to larger atlases, multimodal data and spatially resolved systems.
+
+
+
+\section{Materials and Methods}
+
+\subsection{Data collection and standardized preprocessing}
+
+To evaluate Cytoneighbor across distinct biological settings, we assembled public single-cell RNA-sequencing datasets spanning immune-cell heterogeneity, pancreatic islet composition and diabetic kidney disease (DKD)\cite{Villani2017Immune,Muraro2016Pancreas,Baron2016Pancreas,Segerstolpe2016Pancreas,Xin2016Pancreas,Lawlor2017Pancreas,Wilson2022DKD,Chen2023DKDSpatial,Lake2023KidneyAtlas}. Dataset sources, accession identifiers and sample-level metadata are summarized in the Data Availability Statement and Supplementary Tables.
+
+Raw count matrices were processed using a standardized upstream workflow. Cells with low transcript complexity or excessive mitochondrial transcript fraction were removed using dataset-specific quality-control thresholds established before benchmarking; exact thresholds for each dataset are provided in the Supplementary Materials. Unless otherwise stated, counts were normalized to a fixed library size and transformed as $\log(1+x)$ before downstream analysis. For benchmark settings involving explicit reference--query transfer, all feature-selection steps were defined on the reference partition and then applied to the held-out query partition to avoid leakage of query-specific information into model fitting.
+
+For methods requiring feature restriction, highly variable genes (HVGs) were computed on the reference partition only\cite{Luecken2019BestPractices,Heumos2023BestPractices}. In selected analyses in which fine subtype resolution was a primary objective, lineage-relevant marker genes were retained if they would otherwise have been removed by automated feature selection. This marker-retention step was analysis-specific and should not be interpreted as a mandatory component of the core Cytoneighbor model. Within each benchmark fold, all compared methods were evaluated on the same post-intersection gene universe, while retaining algorithm-specific preprocessing steps required by the original methods.
+
+\subsection{Overview of the Cytoneighbor framework}
+
+Cytoneighbor is a relational learning framework that reconstructs cellular neighborhoods by scoring transcriptomic similarity between cell pairs rather than relying only on absolute cell-wise coordinates. Given processed expression profiles $\mathbf{x}_a, \mathbf{x}_b \in \mathbb{R}^{G}$ for two cells, the model learns a pairwise scoring function
+\begin{equation}
+f_{\theta} \colon \mathbb{R}^{G} \times \mathbb{R}^{G} \rightarrow \mathbb{R},
+\label{eq:pairwise_scoring}
+\end{equation}
+where $f_{\theta}(\mathbf{x}_a,\mathbf{x}_b)$ returns a relational logit. Sigmoid-transformed logits were interpreted as relational similarity scores during candidate re-ranking and graph construction.
+
+These pairwise scores were used in two complementary ways. First, they were aggregated across candidate reference neighbors to support cell-type annotation. Second, they were used to refine local neighborhoods and construct a weighted adjacency graph for downstream integration assessment, manifold reconstruction and disease-state mapping. In this way, Cytoneighbor treats relational neighborhood structure, rather than only a low-dimensional coordinate embedding, as the primary object of inference.
+
+\subsection{Symmetric Relation Encoder (SymRelEnc)}
+
+\subsubsection{Pairwise differential representation}
+
+SymRelEnc takes a cell pair as input. In the default configuration, the pairwise feature vector was defined as the element-wise absolute difference
+\begin{equation}
+\mathbf{h}_{0} = \left| \mathbf{x}_a - \mathbf{x}_b \right|,
+\label{eq:pairwise_abs}
+\end{equation}
+where the absolute value is applied element-wise. This representation is symmetric in the two inputs and emphasizes transcriptomic differences rather than absolute expression magnitude alone.
+
+The implementation also supports a symmetric ratio-based transformation (\texttt{diff\_mode = symdiv}) in which relative contrast is emphasized through a symmetric division followed by $\log(1+x)$ compression. Unless otherwise specified, the benchmarked analyses reported here used the default absolute-difference representation. The corresponding workflow figure and released implementation both preserve this pairwise-difference formulation as the default representation for downstream relational scoring. 
+
+\subsubsection{Neural architecture}
+
+The pairwise differential vector was projected into a hidden feature space and processed by a stack of gated residual multilayer perceptron blocks. For an input $\mathbf{h}_{\ell-1}$ at layer $\ell$, the transformation was
+\begin{equation}
+\begin{aligned}
+\mathbf{z} &= \operatorname{LayerNorm}\!\left(\mathbf{h}_{\ell-1}\right), \\
+\left[\mathbf{g};\mathbf{v}\right] &= \mathbf{W}_{1}\mathbf{z} + \mathbf{b}_{1}, \\
+\widetilde{\mathbf{h}}_{\ell} &= \mathbf{W}_{2}\!\left(\operatorname{GELU}(\mathbf{g}) \odot \mathbf{v}\right) + \mathbf{b}_{2}, \\
+\mathbf{h}_{\ell} &= \mathbf{h}_{\ell-1} + \operatorname{Dropout}\!\left(\widetilde{\mathbf{h}}_{\ell}\right),
+\end{aligned}
+\label{eq:geglu_block}
+\end{equation}
+where $\odot$ denotes element-wise multiplication. This GEGLU-style residual formulation was used to model nonlinear interactions while maintaining stable optimization\cite{Dauphin2017GLU,Shazeer2020GEGLU}.
+
+Unless otherwise specified, the default implementation settings were a projection dimension $d_{\mathrm{model}} = 1024$, a network depth of six residual blocks, a hidden dimension of $2048$, and dropout probability $0.1$. These settings were used unless overridden in experiment-specific scripts and were propagated through the Cytoneighbor wrapper used in the benchmark framework. 
+
+\subsection{Training objectives and optimization}
+
+SymRelEnc was trained with a composite objective that combined supervised pairwise discrimination, relative ranking and self-consistency regularization:
+\begin{equation}
+\mathcal{L}_{\mathrm{total}}
+=
+\lambda_{\mathrm{bce}} \mathcal{L}_{\mathrm{bce}}
++
+\lambda_{\mathrm{rank}} \mathcal{L}_{\mathrm{rank}}
++
+\lambda_{\mathrm{self}} \mathcal{L}_{\mathrm{self}}.
+\label{eq:loss_total}
+\end{equation}
+
+\paragraph{Binary cross-entropy loss.}
+The binary cross-entropy term $\mathcal{L}_{\mathrm{bce}}$ supervised whether a pair of cells belonged to the same annotated class in the training reference. This term established broad discrimination between label-matched and label-mismatched pairs.
+
+\paragraph{Rank loss.}
+To improve local ordering among related cells, we used a triplet-style ranking loss on an anchor cell $\mathbf{x}_a$, a positive cell $\mathbf{x}_p$ and a negative cell $\mathbf{x}_n$:
+\begin{equation}
+\mathcal{L}_{\mathrm{rank}}
+=
+\Bigl[
+m + f_{\theta}(\mathbf{x}_a,\mathbf{x}_n) - f_{\theta}(\mathbf{x}_a,\mathbf{x}_p)
+\Bigr]_{+},
+\label{eq:rank_loss}
+\end{equation}
+where $m$ is a margin and $[\cdot]_{+} = \max(0,\cdot)$. This term encouraged higher relational scores for label-matched or locally compatible cells than for mismatched cells\cite{Schroff2015FaceNet}.
+
+\paragraph{Self-rank regularization.}
+A self-rank term $\mathcal{L}_{\mathrm{self}}$ regularized the score scale by requiring a cell to score more highly with itself than with non-identical partners. This constraint reduced score collapse in overlapping regions of the manifold.
+
+\paragraph{Optimization.}
+Unless otherwise specified, model parameters were optimized with AdamW using the default implementation settings, including learning rate $10^{-3}$, weight decay $10^{-4}$, gradient clipping and a cosine learning-rate schedule with warmup. Models were trained for up to 100 epochs with early stopping on a held-out validation partition, and the best checkpoint was retained for downstream evaluation. Additional implementation details, including validation split construction, hard-example refresh and mixed-precision settings, are provided in the Supplementary Materials. These settings reflect the default Cytoneighbor training implementation and the parameter mapping exposed through the wrapper used in downstream experiments. 
+
+\subsection{Dynamic pair sampling and hard-example refresh}
+
+Training pairs and triplets were refreshed dynamically during optimization rather than fixed once at the start of training. The default sampler combined simple label-based sampling, prototype-guided sampling and global probe-based hard-example mining. This design exposed the model to progressively harder positives and negatives during training, rather than relying only on static random sampling.
+
+Prototype pools and global probes were refreshed during training using approximate nearest-neighbor retrieval in the current feature space. Hard negatives were preferentially sampled when available, with rule-based fallback to class-mismatched or semi-hard negatives otherwise. Additional implementation details, including sampling fractions and refresh schedules, are provided in the Supplementary Materials. This dynamic refresh strategy is part of the core training implementation rather than an analysis-only wrapper.
+
+\subsection{Scalable inference by coarse-to-fine candidate retrieval}
+
+Because exhaustive pairwise scoring scales quadratically with cell number, Cytoneighbor used a two-stage inference procedure.
+
+\paragraph{Stage 1: approximate candidate retrieval.}
+Expression profiles were first aligned to the training feature set and projected into an auxiliary search space using a random projection matrix
+\begin{equation}
+\mathbf{R} = \mathbf{X}\mathbf{P},
+\label{eq:random_projection}
+\end{equation}
+where $\mathbf{X} \in \mathbb{R}^{N \times G}$ is the cell-by-gene matrix and $\mathbf{P} \in \mathbb{R}^{G \times D_{\mathrm{ann}}}$ is a random projection matrix\cite{Johnson1984JL,Dasgupta2003JL}. In the implementation used here, the auxiliary dimension was chosen adaptively as a function of the input gene dimension, subject to lower and upper bounds. Approximate nearest-neighbor search was then performed in this projected space using FAISS with HNSW indexing\cite{Johnson2017Faiss,Malkov2020HNSW}. This coarse candidate-retrieval stage corresponds to the scalable inference step shown in the workflow diagram and the released model implementation. 
+
+\paragraph{Stage 2: relational re-scoring.}
+For each query cell $i$, SymRelEnc re-scored only the retrieved candidate neighbors:
+\begin{equation}
+s_{ij} = \sigma\!\bigl(f_{\theta}(\mathbf{x}_i,\mathbf{x}_j)\bigr),
+\qquad
+j \in \mathcal{N}_{\mathrm{cand}}(i),
+\label{eq:rescore}
+\end{equation}
+where $\sigma(\cdot)$ denotes the sigmoid function. For graph construction, refined pairwise scores were converted into weighted graph edges and written into a neighborhood graph compatible with downstream Scanpy-based analyses. For annotation, refined candidate scores were aggregated across the top re-ranked reference neighbors to obtain class-level predictions. Additional implementation details, including candidate-set sizes and distance transforms, are provided in the Supplementary Materials. In the benchmark framework, the same model functions were exposed through \texttt{transform()} and \texttt{annotate()} wrappers for graph construction and label transfer, respectively. 
+
+\subsection{Gene-CutMix augmentation}
+
+To improve learning in sparsely sampled regions of the transcriptomic manifold, we introduced a training-time augmentation procedure termed \textit{Gene-CutMix}. Synthetic cells were constructed by combining contiguous gene segments from biologically compatible parent cells:
+\begin{equation}
+\mathbf{x}_{\mathrm{syn}}
+=
+\mathbf{M}\odot \mathbf{x}_{\mathrm{parent1}}
++
+\bigl(\mathbf{1}-\mathbf{M}\bigr)\odot \mathbf{x}_{\mathrm{parent2}},
+\label{eq:genecutmix}
+\end{equation}
+where $\mathbf{M} \in \{0,1\}^{G}$ is a binary mask and the swapped segments are contiguous in gene-index space\cite{Yun2019CutMix}. The implementation additionally supports extended multi-parent variants, but the two-parent formulation above captures the core operation.
+
+Synthetic cells were generated under compatibility constraints defined in the training code, including label consistency and, where relevant, donor-aware or lineage-aware restrictions. Additional geometric filters were applied to reject implausible synthetic profiles on the basis of local neighborhood statistics. Unless otherwise specified, Gene-CutMix was enabled during training and refreshed dynamically. Gene-CutMix was used only during training, and synthetic cells were not inserted into the reference retrieval database for downstream evaluation. Consequently, any performance gain measured in retrieval experiments reflected changes in the learned neighborhood geometry rather than trivial enlargement of the candidate pool at test time. This train-only use of synthetic profiles is also enforced in the mechanism-analysis pipeline for held-out rare-cell retrieval. 
+
+\subsection{Experimental design and benchmarking}
+
+We evaluated Cytoneighbor against widely used classical, reference-mapping and deep-learning baselines, including logistic regression, multilayer perceptrons, support vector machines, random forests, naive Bayes, k-nearest neighbors, CellTypist, SingleR, Seurat, scVI, scANVI, scArches, BBKNN and Harmony, depending on the task\cite{Aran2019SingleR,DominguezConde2022CellTypist,Stuart2019Seurat,Hao2021Multimodal,Lopez2018scVI,Xu2021scANVI,Lotfollahi2022scArches,Korsunsky2019Harmony,Polanski2020BBKNN}. Software versions and execution environments are provided in the Supplementary Materials. The benchmark suite included dedicated wrappers or scripts for Cytoneighbor, classical machine-learning baselines, Seurat, SingleR, SciBet and scVI-family methods. 
+
+\paragraph{Leave-one-batch-out annotation.}
+For annotation benchmarks, we used leave-one-batch-out (LOBO) evaluation in which one batch was held out as query and the remaining batches served as reference. Within each fold, compared methods were trained, fitted or mapped using only the reference partition and were then evaluated on the held-out query partition. For the Cytoneighbor LOBO benchmark, reference and query data were normalized to a target sum of $10^{4}$ counts per cell and log-transformed, after which the model was trained fold-wise for up to 100 epochs with Gene-CutMix enabled, early stopping applied, and the best checkpoint retained for each fold. In this benchmark, the Cytoneighbor core model did not apply an external HVG restriction or feature scaling; instead, genes were aligned internally by feature name, with missing genes zero-filled at inference. This behavior follows the benchmark script and core model loader used for Cytoneighbor LOBO evaluation. 
+
+Performance was summarized primarily by Macro-F1 to reduce dominance by large classes. Additional metrics included accuracy, micro-F1, weighted-F1, normalized mutual information (NMI), adjusted mutual information (AMI) and adjusted Rand index (ARI).
+
+\paragraph{Open-set-aware evaluation and stress tests.}
+To evaluate robustness when reference coverage was incomplete, we adopted an open-set-aware scoring protocol. In each LOBO fold, any query cell whose ground-truth label was absent from the corresponding reference partition was remapped in the ground truth to an \textit{Unknown} category before metric computation. This procedure penalized forced assignment of unseen query classes into known reference labels while maintaining a common evaluation target across methods. The protocol should therefore be interpreted as an evaluation strategy for incomplete-reference transfer rather than as a claim that every compared method implemented an explicit calibrated unknown-detection mechanism. This interpretation is consistent with the evaluation wrappers used for Cytoneighbor and the compared baselines. 
+
+To probe robustness beyond average-case performance, we additionally highlighted difficult folds containing rare populations or substantial technical shift, including the Pancreas \textit{Smarter} batch and the Human Immune \textit{Villani} batch. These stress-test subsets were used to determine whether performance degraded disproportionately when reference coverage was limited or batch shift was pronounced.
+
+\paragraph{Integration and biological conservation.}
+For integration benchmarks, we compared batch mixing and biological conservation across datasets using integration LISI (iLISI), cell-type LISI (cLISI), normalized mutual information (NMI) and adjusted Rand index (ARI)\cite{Korsunsky2019Harmony,HubertArabie1985ARI,Vinh2010NMI}. Because Cytoneighbor reconstructs a relational neighborhood graph rather than directly optimizing a low-dimensional coordinate representation, we interpreted integration performance through these complementary summaries rather than through a single metric alone. For Cytoneighbor, graphs were constructed with \texttt{transform()} after coarse candidate retrieval and relational re-scoring; UMAP was then computed from the resulting graph using standard Scanpy graph-based routines for qualitative visualization\cite{McInnes2018UMAP}. UMAPs were used for display only, whereas iLISI, cLISI, NMI and ARI were treated as the primary quantitative summaries.
+
+\paragraph{Resolution stress testing.}
+To examine behavior at increasingly subtle subtype boundaries, we defined a difficulty gradient in the Human Immune dataset consisting of CD4$^{+}$ T cells, CD8$^{+}$ T cells, NK cells and NKT cells. In this analysis, lineage-relevant markers were retained during feature selection to avoid discarding weakly detected but biologically informative subtype markers. We compared methods using global and class-specific F1 scores, targeted confusion analyses and focused neighborhood visualizations of the NK--NKT region. This stress test was designed to assess not only categorical accuracy, but also whether local neighborhood structure remained biologically plausible as subtype boundaries became increasingly subtle. The same evaluation logic was used in the dedicated resolution-benchmark implementation. :contentReference[oaicite:11]{index=11}
+
+\paragraph{Mechanism analysis under extreme scarcity.}
+To assess the role of Gene-CutMix under severe sampling imbalance, pancreatic delta cells were heavily downsampled in the reference and a held-out set of real delta cells was reserved for retrieval testing. Cross-partition Recall@$K$ was then computed by concatenating the real reference and held-out query cells, querying neighbors on the combined dataset, and restricting evaluation to neighbors belonging to the real reference partition only. A safety buffer was added to the requested neighbor count so that, after removal of query self-hits, each query cell still retained at least $K$ genuine reference neighbors. Under this design, improvements in Recall@$K$ reflected stronger recovery of real rare-cell neighborhoods rather than direct augmentation of the retrieval database by synthetic points. This benchmark structure follows the dedicated mechanism-analysis implementation.
+
+\paragraph{Joint healthy--disease manifold analysis.}
+For DKD analysis, the relational model was trained on all healthy reference cells, rather than on proximal-tubule cells alone, so that the model retained multi-lineage negative pairs during training. After training, healthy and diseased proximal-tubule cells were concatenated into a joint AnnData object and processed with a single Cytoneighbor graph-construction step. This design allowed diseased proximal-tubule cells to identify healthy proximal-tubule cells as nearest neighbors under a healthy-defined relational metric.
+
+Leiden clustering was used to define coarse states, and PAGA together with diffusion pseudotime (DPT) was used to summarize graph connectivity and approximate progression structure\cite{Traag2019Leiden,Wolf2019PAGA,Haghverdi2016DPT}. Root selection was performed without marker preassignment: the cluster containing the largest absolute number of healthy proximal-tubule cells was used as the root state. This choice reduced circularity because downstream zonation labels were assigned only after graph construction. In this analysis, PAGA was interpreted primarily as a summary of graph topology, whereas DPT was treated as an approximate ordering of transcriptional change within a convergent manifold rather than as a definitive lineage trajectory. Within-cluster comparisons were then used to separate state-specific transcriptional differences from changes in cluster composition. This healthy-defined joint-manifold workflow follows the dedicated DKD discovery pipeline.
+
+\subsection{Statistical analysis and implementation details}
+
+Cytoneighbor was implemented in Python using PyTorch with CUDA acceleration. Approximate nearest-neighbor retrieval was performed with FAISS HNSW indexing. Unless otherwise stated, all methods were evaluated under the same fold definitions and dataset partitions, while retaining algorithm-specific preprocessing steps where required by the original method.
+
+Macro-F1 was used as the primary annotation metric because it weights classes equally and is therefore less influenced by large populations. For LOBO annotation benchmarks, scores were computed after open-set-aware ground-truth remapping of query labels absent from the corresponding reference fold. For integration tasks, iLISI, cLISI, NMI and ARI were used as complementary measures of batch mixing and biological conservation. Dimensionality reduction for visualization was performed with UMAP on either method-specific low-dimensional representations or Cytoneighbor-derived graphs, depending on the analysis\cite{McInnes2018UMAP}.
+
+For manuscript-level inference, we analyzed paired fold-level contrasts (Cytoneighbor minus comparator) with hierarchical random-effects models that accounted for dataset-level heterogeneity and fold-level repeated evaluation. For each metric family, we report pooled effect sizes with 95\% confidence intervals and two-sided significance testing. Annotation and integration analyses used the same inferential structure, and DKD validation analyses used donor-aware models for within-state expression and signature-score contrasts. Effect-size definitions were fixed per outcome type before analysis and kept consistent within each family.
+
+To control multiplicity while preserving interpretability, we applied Benjamini--Hochberg false-discovery-rate correction within pre-specified hypothesis families (annotation, integration, DKD mechanism/validation), and report adjusted $q$ values in the main and supplementary summary tables. Sensitivity analyses included leave-one-dataset-out (LODO) meta-synthesis and resampling-based confidence intervals for key contrasts. For targeted within-state expression comparisons in DKD, one-sided Mann--Whitney $U$ tests were retained as secondary supportive tests, with accompanying effect sizes and corrected significance reported alongside model-based estimates.
+
+Where stochastic training was involved, results were summarized over the predefined benchmark folds rather than over repeated random restarts. Implementation defaults not explicitly varied in a given experiment, together with software versions, execution environments and analysis scripts, are provided in the accompanying repository and Supplementary Materials.
+
+
+\bibliographystyle{unsrt}
+\bibliography{References}
+
+
+\end{document}

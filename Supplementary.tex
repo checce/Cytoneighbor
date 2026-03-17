@@ -1,0 +1,360 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{setspace}
+\doublespacing
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc} % omit if using XeLaTeX or LuaLaTeX
+\usepackage{lmodern}
+
+\usepackage{amsmath,amssymb,amsfonts,bm,mathtools}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage[font=small,labelfont=bf]{caption}
+
+\captionsetup[figure]{font=small,skip=4pt}
+\setlength{\parindent}{1.5em}
+\setlength{\parskip}{0pt}
+
+\begin{document}
+
+\section*{Supplementary Information}
+
+\subsection*{Supplementary Methods}
+
+\subsubsection*{Supplementary Note 1. Dataset-specific preprocessing and quality control}
+
+Benchmark scripts in this repository consumed pre-filtered input matrices and, in the released pipelines, did not re-apply a universal dataset-level \texttt{min\_counts}/\texttt{max\_mito} cell filter. Instead, preprocessing differed by benchmark driver (for example, method-specific \texttt{filter\_genes}, reference-only HVG selection and benchmark-specific split policies). Exact script-level thresholds with code anchors are provided in Supplementary Table~S1 and in machine-readable form in \texttt{repro/qc\_threshold\_manifest.csv}.
+
+For reference--query transfer analyses, all preprocessing steps that could introduce information leakage were defined on the reference partition only. In particular, when highly variable gene (HVG) restriction was required by a baseline method, HVGs were computed on the reference partition and then applied to the held-out query partition. Query data were never used to define HVG sets, principal components or reference dictionaries for methods in which such leakage would affect evaluation.
+
+In benchmark-specific stress tests involving subtle lineage boundaries, lineage-relevant markers were retained after HVG selection if they would otherwise have been removed. This marker-retention step was applied only in those analysis-specific pipelines and was not part of the default Cytoneighbor architecture. Example marker-retention sets are summarized in Supplementary Table~S5.
+
+\subsubsection*{Supplementary Note 2. Core Cytoneighbor implementation settings}
+
+Unless otherwise specified in an experiment-specific script, the default SymRelEnc implementation used the following settings:
+\begin{itemize}
+    \item pairwise differential mode: \texttt{diff\_mode = abs}
+    \item model width: \texttt{d\_model = 1024}
+    \item hidden dimension: \texttt{hidden = 2048}
+    \item depth: \texttt{depth = 6}
+    \item dropout: \texttt{dropout = 0.1}
+    \item optimizer: AdamW
+    \item learning rate: \texttt{lr = 1e-3}
+    \item weight decay: \texttt{weight\_decay = 1e-4}
+    \item maximum epochs: \texttt{epochs = 100}
+    \item warmup ratio: \texttt{warmup\_ratio = 0.05}
+    \item gradient clipping: \texttt{grad\_clip = 5.0}
+    \item early-stopping patience: \texttt{patience = 10}
+    \item early-stopping minimum delta: \texttt{min\_delta = 1e-4}
+    \item validation fraction: \texttt{val\_frac = 0.2}
+    \item default monitor: \texttt{monitor = dyn\_val\_auc}
+\end{itemize}
+
+The training objective combined binary cross-entropy, rank loss and self-rank regularization. Default loss-related settings were:
+\begin{itemize}
+    \item \texttt{rank\_weight = 1.0}
+    \item \texttt{rank\_margin = 0.5}
+    \item \texttt{self\_weight = 0.2}
+    \item \texttt{self\_margin = 0.5}
+    \item \texttt{self\_fraction = 0.5}
+    \item label smoothing disabled by default
+\end{itemize}
+
+Mixed-precision training was enabled when supported by the hardware environment, using the implementation defaults. Gradient computation used CUDA acceleration when available. These settings describe implementation defaults and should be distinguished from benchmark-specific overrides summarized in Supplementary Table~S4.
+
+\subsubsection*{Supplementary Note 3. Dynamic sampling, hard-example refresh and feature-space noise}
+
+Training supervision was refreshed dynamically rather than fixed at initialization. The default sampler combined three components:
+\begin{itemize}
+    \item simple label-based sampling
+    \item prototype-guided sampling
+    \item global probe-based hard-example mining
+\end{itemize}
+with default relative fractions of 0.50, 0.20 and 0.30, respectively. The default number of sampled training pairs per epoch was 6000.
+
+Prototype pools were refreshed every three epochs. Global probes were updated using approximate nearest-neighbor retrieval in the current feature space. When available, hard negatives were sampled preferentially from a negative cache (\texttt{neg\_cache\_pick\_p = 0.9}); otherwise, semi-hard or class-mismatched negatives were sampled by fallback rules. Rank and self-rank margins were warmed up over the early training epochs to stabilize optimization.
+
+Additional feature-space noise could be injected during training through Gaussian feature jitter, with default initial standard deviation 0.03 and subsequent decay. These procedures were intended to expose the model to progressively harder positives and negatives while maintaining stable optimization in sparse and heterogeneous transcriptomic settings.
+
+\subsubsection*{Supplementary Note 4. Coarse-to-fine retrieval, graph construction and annotation score aggregation}
+
+Cytoneighbor used a two-stage inference strategy to avoid exhaustive all-by-all pair scoring.
+
+In the first stage, cells were projected into an auxiliary search space using a random projection matrix. The auxiliary search dimension was chosen adaptively as
+\[
+D_{\mathrm{ann}}=\min\!\left(D_{\max}, \max\!\left(D_{\min}, \mathrm{round}(rG)\right)\right),
+\]
+where the implementation defaults were $r=0.08$, $D_{\min}=256$ and $D_{\max}=1024$. Candidate retrieval was then performed using FAISS HNSW indexing.
+
+For graph construction through \texttt{transform()}, the default implementation retrieved up to 1000 coarse candidates per cell before retaining 15 refined neighbors in the final graph. For annotation through \texttt{annotate()}, the default refined reference-neighbor count was \texttt{k\_ref = 64}, and the coarse candidate count was chosen automatically as
+\[
+\min\!\bigl(n_{\mathrm{ref}}, \max(4k_{\mathrm{ref}}, 128)\bigr)
+\]
+unless overridden.
+
+In the second stage, SymRelEnc re-scored only the retrieved candidate neighbors. For graph construction, refined logits were converted to distances using a monotone transformation (\texttt{logit\_softplus} by default) and written into a fuzzy neighborhood graph compatible with downstream Scanpy analyses. For annotation, re-ranked candidate neighbors were aggregated by weighted class voting over the top-ranked reference cells.
+
+In the reported LOBO benchmark, Cytoneighbor was evaluated in label-transfer mode with
+\begin{itemize}
+    \item \texttt{enable\_unknown = False}
+    \item \texttt{score\_mode = logit}
+    \item \texttt{temperature = 1.0}
+\end{itemize}
+although explicit unknown-thresholding options remained available in the implementation. The reported LOBO results should therefore be interpreted as evidence of robustness under incomplete reference coverage rather than as a direct comparison of calibrated unknown-detection performance.
+
+\subsubsection*{Supplementary Note 5. Gene-CutMix implementation details}
+
+Gene-CutMix was applied only during training and is formalized in the implementation as a constrained synthesis operator over parent cells. In the default two-parent mode, for compatible parents $(x_i, x_j)$, a contiguous mask $M \in \{0,1\}^G$ is sampled and
+\[
+\tilde{x}=M\odot x_i + (1-M)\odot x_j,\quad r\sim \mathcal{U}(0.35,0.65),
+\]
+where $r$ controls the exchanged gene fraction. In the optional three-parent mode (default probability \texttt{synth\_p\_three\_parent}=0.25), three contiguous segments with default proportions $(0.3,0.4,0.3)$ are concatenated:
+\[
+\tilde{x}=M_1\odot x_{p_1}+M_2\odot x_{p_2}+M_3\odot x_{p_3},\quad M_1+M_2+M_3=\mathbf{1}.
+\]
+
+Compatibility is enforced before synthesis by a rule set implemented in code: class-label consistency is required; donor-aware and lineage-aware constraints are additionally applied when those annotations are available. Formally, candidate parents are sampled only from tuples satisfying
+\[
+\mathcal{C}(p_a,p_b[,p_c])=1,
+\]
+where $\mathcal{C}$ encodes these metadata constraints.
+
+Accepted synthetic cells must also pass a geometric filter. For each donor--class key $(d,c)$, the code computes center $\mu_{d,c}$, intra-class radius $\rho_{d,c}$ (95th percentile distance to center), and nearest other-class center distance $\delta_{d,c}$ within donor. A synthetic cell is retained only if
+\[
+\|\tilde{x}-\mu_{d,c}\|_2 \le \min(\alpha\,\rho_{d,c},\,\gamma\,\delta_{d,c}),
+\]
+with defaults \texttt{synth\_alpha}=1.0 and \texttt{synth\_gamma}=1.0. If radius or margin statistics are undefined (for example, too few samples), the corresponding bound is treated as $+\infty$ in the implementation. Rejected synthetic candidates are discarded and sampling continues until per-region targets are met or caps are reached.
+
+Default synthesis controls are listed in Supplementary Table~S6 and are mapped directly to the \texttt{src/model.py} training arguments. Synthetic cells were never inserted into the reference retrieval database during downstream evaluation. Accordingly, observed retrieval gains should be interpreted as changes in learned neighborhood geometry rather than expansion of the test-time candidate pool.
+
+\subsubsection*{Supplementary Note 6. LOBO annotation benchmark protocol}
+
+For leave-one-batch-out (LOBO) annotation, one batch was held out as query and the remaining batches served as reference. Fold definitions were shared across methods within each dataset. Each method was trained, fitted or mapped using only the reference partition for a given fold, and predictions were then generated for the held-out query partition.
+
+To evaluate robustness under incomplete reference coverage, any query label absent from the corresponding reference fold was remapped in the ground truth to an \textit{Unknown} category before metric computation. This remapping was applied during evaluation and should not be interpreted as implying that all compared methods explicitly implemented unknown detection.
+
+For the Cytoneighbor LOBO benchmark, reference and query matrices were normalized to a target sum of $10^4$ and log-transformed. The model was trained fold-wise with Gene-CutMix enabled for up to 100 epochs with early stopping, and the best fold-specific checkpoint was loaded for evaluation. The Cytoneighbor LOBO implementation did not apply an external HVG restriction or feature scaling. Instead, genes were aligned internally by feature name, with missing genes zero-filled at inference. This feature-alignment behavior is described further in Supplementary Note~13.
+
+Performance was summarized primarily by Macro-F1. Additional metrics included accuracy, micro-F1, weighted-F1, NMI, AMI and ARI. Fold-wise results are provided in Supplementary Data.
+
+\subsubsection*{Supplementary Note 7. Baseline-specific implementation details}
+
+Classical baselines, including logistic regression, multilayer perceptrons, support vector machines, random forests, naive Bayes, k-nearest neighbors and gradient-boosted trees, were trained on reference-defined feature representations after normalization, log-transformation, feature scaling and principal component analysis fitted on the reference partition only.
+
+CellTypist, SingleR, Seurat and SciBet were run using their respective reference-mapping workflows. For SciBet and scVI-family baselines, HVGs were defined on the reference partition and then applied to the query partition. Missing predictions or method-specific mapping failures were mapped to \textit{Unknown} only when required by the evaluation wrapper. This distinction is important because the common open-set-aware protocol was enforced at the evaluation level rather than through a shared unknown-detection implementation.
+
+scArches/scANVI benchmarks were run from a common joint pipeline in which HVGs were first defined on the reference partition, followed by scVI/scANVI-style latent-space construction and label transfer. Harmony and BBKNN were used in batch-integration tasks only.
+
+Software versions, package sources and execution environments for all baselines are listed in Supplementary Table~S2.
+
+\subsubsection*{Supplementary Note 8. Integration benchmark details}
+
+Integration performance was evaluated using iLISI, cLISI, NMI and ARI. Because Cytoneighbor reconstructs a relational neighborhood graph rather than directly optimizing a coordinate-space latent representation, we interpreted integration behavior using these complementary summaries rather than through any single metric alone.
+
+For Cytoneighbor, graph construction was performed using \texttt{transform()} after coarse candidate retrieval and relational re-scoring. UMAP embeddings were then computed from the resulting graph using standard Scanpy graph-based routines. These UMAPs were used for visualization only and were not treated as primary quantitative evidence. Throughout the manuscript, claims about integration behavior were based primarily on the quantitative summaries rather than on visual separation alone.
+
+\subsection*{Supplementary Benchmark Protocols}
+
+\subsubsection*{Supplementary Note 9. Resolution stress testing}
+
+To examine increasingly subtle subtype boundaries, we defined a difficulty gradient in the Human Immune dataset spanning CD4$^{+}$ T cells, CD8$^{+}$ T cells, NK cells and NKT cells. In this analysis, lineage-relevant markers were retained after feature selection to avoid discarding weakly detected but biologically informative subtype markers.
+
+Performance was assessed using global and class-specific F1 scores, confusion matrices, targeted misclassification rates for the NKT class, and focused local neighborhood visualizations in the NK--NKT region. This analysis was intended to distinguish oversmoothing, fragmentation and subtype discrimination behavior across methods. The resulting interpretation should be understood as a comparison of neighborhood organization and classification behavior, not as proof of a unique biological topology.
+
+\subsubsection*{Supplementary Note 10. Mechanism analysis under extreme scarcity}
+
+For Gene-CutMix mechanism analysis, pancreatic delta cells were aggressively downsampled in the reference, while a held-out set of real delta cells was reserved for retrieval testing. Cross-partition Recall@$K$ was computed by concatenating reference and query cells, constructing neighbors on the combined set, and restricting evaluation to neighbors belonging to the real reference partition only. A safety buffer was added to the requested neighbor count so that each query cell retained at least $K$ evaluable reference neighbors after removal of self-hits.
+
+Under this design, improvements in Recall@$K$ reflected better recovery of real rare-cell neighborhoods rather than direct augmentation of the test-time retrieval pool by synthetic cells. The interpretation of Gene-CutMix in this benchmark is therefore training-time manifold stabilization rather than generation of biologically validated intermediate cell states.
+
+\subsubsection*{Supplementary Note 11. DKD healthy--disease joint manifold analysis}
+
+For DKD analysis, the relational model was trained using all healthy reference cells rather than proximal-tubule cells alone, thereby preserving multi-lineage negative pairs during training. After training, healthy and diseased proximal-tubule cells were concatenated into a joint AnnData object and processed using a single Cytoneighbor graph-construction step.
+
+Leiden clustering was used to define coarse states. The root state for downstream graph interpretation was chosen without marker-based preassignment: specifically, the cluster containing the largest absolute number of healthy proximal-tubule cells was selected. This reduced circularity because zonation identities were assigned only after graph construction.
+
+PAGA was interpreted as a summary of graph topology. Diffusion pseudotime was used only as an approximate ordering of transcriptional change within the convergent manifold and not as a definitive lineage trajectory. Within-cluster comparisons were then used to distinguish state-specific transcriptional differences from changes in cluster composition.
+
+\subsubsection*{Supplementary Note 12. Additional details on DKD state interpretation}
+
+For DKD analysis, healthy-enriched proximal-tubule states were interpreted only after graph construction and cluster definition. Marker-based naming was therefore performed post hoc rather than used to define the graph itself. In particular, \textit{SLC5A1} was used as an independent indicator of S3-like identity, whereas \textit{SLC5A2}, \textit{LRP2} and related epithelial transport genes were interpreted in combination with graph topology and cell-of-origin composition.
+
+PAGA connectivity was used to assess whether the three-state organization was more consistent with convergence onto a shared injured state than with a simple linear arrangement. Diffusion pseudotime was then used only as an approximate ordering within this convergent manifold. The DKD analysis should therefore be interpreted as graph-supported transcriptional organization rather than as a definitive reconstruction of \textit{in vivo} lineage progression.
+
+\subsubsection*{Supplementary Note 13. Reference alignment, feature matching and zero-filling at inference}
+
+For Cytoneighbor inference, query features were aligned to the training feature set by gene name. If a gene present during training was absent from a given query matrix, the corresponding query feature was filled with zero after normalization and log-transformation. Conversely, query-only genes not present in the trained model were discarded. This procedure ensured stable compatibility between fold-specific trained models and held-out query batches without fitting additional transformations on the query.
+
+This alignment step was particularly important in cross-study benchmarks, where gene lists differed slightly across datasets or batches. Because alignment was defined relative to the reference-trained model, it did not introduce query-derived information into model fitting.
+
+\subsubsection*{Supplementary Note 14. Benchmark-specific Cytoneighbor overrides}
+
+Although most Cytoneighbor analyses were run close to the implementation defaults, several benchmarks imposed analysis-specific overrides.
+
+For LOBO annotation, Cytoneighbor was evaluated with \texttt{enable\_unknown = False}, \texttt{score\_mode = logit} and \texttt{temperature = 1.0}. For graph-based integration and manifold reconstruction, graphs were generated with \texttt{transform()} and final neighborhood graphs retained 15 refined neighbors per cell. For the rare-cell mechanism analysis, retrieval evaluation used an augmented neighbor request to ensure at least $K$ evaluable reference neighbors after removal of query self-matches. For the DKD joint-manifold analysis, model training used all healthy reference cells rather than proximal-tubule cells alone.
+
+These benchmark-specific overrides are summarized together with remaining default settings in Supplementary Table~S4.
+
+\subsection*{Supplementary Results Support}
+
+\subsubsection*{Supplementary Note 15. Annotation result organization and metric reporting}
+
+Fold-wise annotation results were exported for each LOBO benchmark, including accuracy, macro-F1, micro-F1, weighted-F1, NMI, AMI and ARI. Macro-F1 was treated as the primary annotation summary because it weights classes equally and is therefore more sensitive to degradation on rare or incompletely represented cell states than global accuracy alone.
+
+For the Cytoneighbor LOBO benchmark, the reported results correspond to fold-specific models trained with Gene-CutMix enabled and evaluated in label-transfer mode with \texttt{enable\_unknown = False}, \texttt{score\_mode = logit} and \texttt{temperature = 1.0}. Query labels absent from the corresponding reference fold were remapped in the ground truth to \textit{Unknown} before metric computation. Accordingly, the reported annotation metrics should be interpreted as robustness under incomplete reference coverage rather than as a direct comparison of explicit unknown-detection performance.
+
+The full fold-wise annotation matrix is provided in the accompanying CSV summary and should be consulted when comparing methods across datasets or held-out batch identities.
+
+\subsubsection*{Supplementary Note 16. Integration metrics summary across datasets}
+
+Integration performance was evaluated across the Human Immune, Pancreas and Diabetic Kidney Disease datasets using iLISI, cLISI, NMI and ARI. Consistent with the main text, Cytoneighbor did not maximize iLISI and therefore was not the most aggressive batch-mixing method. However, it achieved the strongest biological conservation by NMI and ARI across the evaluated datasets and showed favorable cLISI values, particularly in Pancreas and Diabetic Kidney Disease.
+
+The integration summary table used in the main figure reported the following values for Cytoneighbor: Human Immune, iLISI $= 2.237$, cLISI $= 1.157$, NMI $= 0.817$, ARI $= 0.671$; Pancreas, iLISI $= 2.061$, cLISI $= 1.033$, NMI $= 0.849$, ARI $= 0.725$; and Diabetic Kidney Disease, iLISI $= 2.590$, cLISI $= 1.088$, NMI $= 0.868$, ARI $= 0.871$. By contrast, Harmony achieved the highest iLISI values across datasets, consistent with more aggressive batch mixing, but showed weaker biological conservation than Cytoneighbor. These patterns support the interpretation that Cytoneighbor occupies a favorable region of the integration--conservation landscape rather than maximizing mixing alone.
+
+\subsubsection*{Supplementary Note 17. Rare-cell retrieval metric definition and interpretation}
+
+Recall@$K$ in the rare-cell mechanism analysis was defined on held-out rare query cells using a cross-partition retrieval setting. Real reference cells and held-out rare query cells were concatenated into a single object, neighbor indices were computed on the combined set, and only neighbors belonging to the real reference partition were retained for evaluation. A safety buffer was added to the requested neighbor count so that, after removal of query self-hits, each query cell still retained at least $K$ evaluable reference neighbors.
+
+This design ensured that Recall@$K$ measured the recoverability of real rare-cell neighborhoods rather than direct retrieval of synthetic examples. Synthetic profiles generated by Gene-CutMix were not inserted into the retrieval database. Consequently, improved Recall@$K$ should be interpreted as evidence that Gene-CutMix stabilized the learned relational manifold in sparsely sampled regions, not as evidence that synthetic cells themselves served as evaluation targets.
+
+\subsubsection*{Supplementary Note 18. Statistical analysis, software versions and reproducibility}
+
+Macro-F1 was used as the primary annotation metric because it weights classes equally and is therefore less influenced by abundant populations. For LOBO annotation, all scores were computed after open-set-aware ground-truth remapping of query labels absent from the corresponding reference fold. For integration analyses, iLISI, cLISI, NMI and ARI were treated as complementary summaries of batch mixing and biological conservation.
+
+For targeted within-state DKD comparisons, one-sided Mann--Whitney $U$ tests were used. Exact comparison definitions, effect directions and any accompanying multiple-testing considerations are summarized in Supplementary Table~S3.
+
+Where stochastic training was involved, results were summarized over the predefined benchmark folds rather than over repeated random restarts. Analysis scripts, implementation defaults, software versions and execution environments for PyTorch, Scanpy, FAISS and external baseline packages are provided in the accompanying repository and Supplementary Table~S2.
+
+\subsection*{Supplementary Tables / Supplementary Data Guide}
+
+\noindent\textbf{Supplementary Data guide.} Supplementary Data~1 contains fold-wise annotation results for the LOBO benchmark, including accuracy, macro-F1, micro-F1, weighted-F1, NMI, AMI and ARI across all evaluated methods and held-out batches. Supplementary Data~2 contains integration benchmark summaries across Human Immune, Pancreas and Diabetic Kidney Disease, including iLISI, cLISI, NMI and ARI for each method. Additional benchmark-level outputs, including Cytoneighbor checkpoints, plot-ready metric tables and task-specific summaries, are provided in the accompanying repository.
+
+\begin{table}[htbp]
+\centering
+\caption{\textbf{Supplementary Table S1. Dataset summary and preprocessing thresholds.}}
+\label{tab:s1_dataset_summary}
+\renewcommand{\arraystretch}{1.2}
+\scriptsize
+\begin{tabular}{p{0.13\textwidth} p{0.15\textwidth} p{0.10\textwidth} p{0.16\textwidth} p{0.25\textwidth} p{0.15\textwidth}}
+\toprule
+\textbf{Dataset} & \textbf{Accession} & \textbf{Split key} & \textbf{Cell-QC thresholds} & \textbf{Gene/HVG preprocessing (exact)} & \textbf{Source anchor} \\
+\midrule
+Human Immune (integration + resolution) & Multi-study PBMC compendium (main references) & batch & No extra \texttt{min\_counts}/\texttt{max\_mito} filter in released drivers & Integration: \texttt{filter\_genes(min\_cells=10)} + \texttt{normalize\_total(1e4)} + \texttt{log1p} + \texttt{HVG(3000)}; Resolution: \texttt{HVG(min\_mean=0.0125,max\_mean=3,min\_disp=0.5)} with mandatory-marker rescue & \texttt{PartB/a-main\_remove.py:2732--2735}; \texttt{benchmark\_resolution.py:197--216} \\
+Pancreas (mechanism) & Baron 2016 / Segerstolpe 2016 / Xin 2016 / Lawlor 2017 compendium & batch (plus rare-cell partition) & No extra \texttt{min\_counts}/\texttt{max\_mito} filter in released driver & \texttt{normalize\_total(1e4)} + \texttt{log1p}; reference-only \texttt{HVG(0.0125,3,0.5)}; rare downsampling \texttt{downsample\_fraction=0.01}, \texttt{n\_keep=max(2,\dots)} & \texttt{mechanism\_analysis.py:63--66,104--105,113,127--128} \\
+Diabetic Kidney Disease (joint manifold) & GEO: GSE131882 (processed DKD panel) & disease (healthy vs DKD) & No explicit \texttt{max\_mito} cut; dynamic gene keep threshold used & \texttt{min\_cells=max(10,0.001*n\_obs)} and \texttt{gene\_ct>=10}; \texttt{normalize\_total(1e4)} + \texttt{log1p} + \texttt{HVG(3000)} & \texttt{disease\_discovery.py:273--274,289--291,312--315} \\
+Lung atlas public (LOBO) & Public lung atlas compendium (repository-integrated) & batch & Runtime-injected dataset; no universal cell-QC override in wrapper & Method-specific wrappers: \texttt{filter\_genes(min\_cells=3/10/20)} and reference-only HVG (\texttt{2000} or \texttt{3000}) as required & \texttt{PartA/a-main\_seurat\_cv-ls.py:72}; \texttt{a-main\_scanvi\_cv-ls.py:208,251}; \texttt{a-main\_scarches-scanvi-joint.py:266,303} \\
+Mouse kidney (mod1, LOBO) & Public mouse kidney benchmark panel & batch & No universal \texttt{min\_counts}/\texttt{max\_mito} override in Cytoneighbor wrapper & Cytoneighbor wrapper: reference \texttt{normalize\_total(1e4)} + \texttt{log1p} + \texttt{HVG(3000)}; CellTypist wrapper: \texttt{filter\_genes(min\_cells=10)} & \texttt{a-main\_Cytoneighbor\_cv-ls.py:69--70,134--136}; \texttt{a-main\_celltypist\_cv-ls.py:244,263,163} \\
+Zebrafish embryonic cells (LOBO) & Public zebrafish embryo atlas panel & batch & No extra \texttt{min\_counts}/\texttt{max\_mito} filter in released wrappers & scANVI/scArches wrappers: \texttt{filter\_genes(min\_cells=10/20)}, \texttt{HVG(3000)}; SciBet wrapper: \texttt{HVG(2000)} & \texttt{a-main\_scanvi\_cv-ls.py:154,208,251}; \texttt{a-main\_scarches\_cv-ls.py:24,44,63}; \texttt{a-main\_scibet\_cv-ls.py:14,30,44} \\
+Human tendon snRNA-seq & CELLxGENE: 8d2e51ab-0edd-46c8-bdac-558de319d6c2 & \texttt{sample\_id}/\texttt{donor\_id} & Runtime-injected dataset; no global cell-QC override in wrappers & Same LOBO wrapper policy as above (method-specific \texttt{filter\_genes} and reference-only HVG where required) & \texttt{repro/qc\_threshold\_manifest.csv} (full script-level trace) \\
+\bottomrule
+\end{tabular}
+\normalsize
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{\textbf{Supplementary Table S2. Software versions, execution environments and repository components.}}
+\label{tab:s2_software_versions}
+\renewcommand{\arraystretch}{1.2}
+\scriptsize
+\begin{tabular}{p{0.20\textwidth} p{0.18\textwidth} p{0.20\textwidth} p{0.30\textwidth}}
+\toprule
+\textbf{Component} & \textbf{Exact pin} & \textbf{Lock / source} & \textbf{Notes} \\
+\midrule
+Python runtime & 3.10.18 & \texttt{repro/locks/conda-list-smn.txt} & Primary runtime in conda env \texttt{smn} \\
+PyTorch & 2.8.0+cu129 & \texttt{repro/locks/conda-list-smn.txt} & Core Cytoneighbor training/inference dependency \\
+Scanpy / AnnData / FAISS & 1.10.3 / 0.11.4 / 1.8.0 & \texttt{repro/locks/conda-list-smn.txt} & Graph analysis, data structure and HNSW backend \\
+scvi-tools / scArches / CellTypist & 1.3.3 / 0.6.1 / 1.6.3 & \texttt{repro/locks/conda-list-smn.txt} & Baseline stack in the same pinned environment \\
+R / Seurat / SingleR & 4.4.1 / 5.3.0 / 2.8.0 & \texttt{repro/locks/r-session-smn.txt} & R baseline versions pinned from the execution environment \\
+SciBet baseline & wrapper-script pin & \texttt{experiments/PartA/NetWork/run\_scibet.R} & Package-level SciBet version is not separately pinned; wrapper is pinned by repository freeze tag \\
+Git freeze tag & \texttt{submission-v1-freeze} & git tag in repository root & Added in this revision to replace prior ``no-tag'' state \\
+Package locks & explicit conda + pip + env export & \texttt{repro/locks/*.txt,yml} & SHA256 entries recorded in \texttt{repro/repro\_manifest.csv} \\
+Container recipes & Docker + Apptainer definitions & \texttt{repro/container/*} & Recipe files are hash-pinned; image digests are obtained at build time as documented in \texttt{repro/container/README.md} \\
+\bottomrule
+\end{tabular}
+\normalsize
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{\textbf{Supplementary Table S3. Targeted DKD statistical comparisons.}}
+\label{tab:s3_dkd_stats}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{p{0.18\textwidth} p{0.20\textwidth} p{0.16\textwidth} p{0.16\textwidth} p{0.18\textwidth}}
+\toprule
+\textbf{Comparison} & \textbf{Cell subset} & \textbf{Direction tested} & \textbf{Statistical test} & \textbf{Multiple-testing note} \\
+\midrule
+\textit{SLC5A2} Healthy vs DKD & S1/S2-like PT & DKD $>$ Healthy & one-sided Mann--Whitney $U$ & hypothesis-directed, targeted comparison \\
+Functional program score (SLC5A2/LRP2) by state & Cluster-level state summaries (0 vs 2) & Functional PT (S1/S2-like) $>$ Injured PT (1.961 vs 1.229) & descriptive state-level summary from \texttt{experiment\_results.json} & descriptive support; inferential $p$ not retained in exported summary file \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{\textbf{Supplementary Table S4. Benchmark-specific Cytoneighbor overrides relative to implementation defaults.}}
+\label{tab:s4_overrides}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{p{0.20\textwidth} p{0.22\textwidth} p{0.22\textwidth} p{0.24\textwidth}}
+\toprule
+\textbf{Benchmark} & \textbf{Key override} & \textbf{Value} & \textbf{Rationale} \\
+\midrule
+LOBO annotation & \texttt{enable\_unknown} & \texttt{False} & shared open-set-aware evaluation without explicit unknown calling \\
+LOBO annotation & \texttt{score\_mode} & \texttt{logit} & label-transfer evaluation \\
+LOBO annotation & \texttt{temperature} & 1.0 & default score scaling \\
+Integration / graph reconstruction & final neighbors & 15 & graph construction for downstream Scanpy analyses \\
+Mechanism analysis & neighbor request buffer & analysis-specific & ensure at least $K$ evaluable reference neighbors \\
+DKD joint manifold & training population & all healthy cells & preserve multi-lineage negatives during training \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{\textbf{Supplementary Table S5. Optional benchmark-specific marker-retention sets.}}
+\label{tab:s5_marker_sets}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{p{0.22\textwidth} p{0.66\textwidth}}
+\toprule
+\textbf{Analysis} & \textbf{Example retained markers} \\
+\midrule
+Immune resolution stress test & \textit{CD4}, \textit{CD8A}, \textit{CD8B}, \textit{CD3D}, \textit{CD3E}, \textit{CD3G}, \textit{NCAM1}, \textit{KLRD1}, \textit{FCGR3A}, \textit{IL7R}, \textit{CCR7}, \textit{S100A4}, \textit{FOXP3}, \textit{GZMB}, \textit{PRF1} (retained when absent from HVGs in stress-test pipeline) \\
+DKD zonation validation & \textit{SLC5A1} (S3-like zonation marker), \textit{SLC5A2}, \textit{LRP2} (functional PT program), \textit{VCAM1}, \textit{HAVCR1} (injury program) for post hoc state interpretation \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{\textbf{Supplementary Table S6. Formalized Gene-CutMix synthesis and filtering defaults in \texttt{src/model.py}.}}
+\label{tab:s6_genecutmix_defaults}
+\renewcommand{\arraystretch}{1.2}
+\scriptsize
+\begin{tabular}{p{0.24\textwidth} p{0.18\textwidth} p{0.24\textwidth} p{0.24\textwidth}}
+\toprule
+\textbf{Parameter / rule} & \textbf{Default} & \textbf{Formal meaning} & \textbf{Source anchor} \\
+\midrule
+\texttt{synth\_enable} & \texttt{True} & Enable train-time synthetic generation & \texttt{src/model.py:941} \\
+\texttt{synth\_refresh\_every} & 1 & Rebuild synthesis pool each epoch interval & \texttt{src/model.py:942,1146} \\
+\texttt{synth\_mult\_per\_dt} / \texttt{synth\_cap\_per\_dt} & 1.2 / 600 & Per difficult-type target multiplicity and cap & \texttt{src/model.py:943--944,1149} \\
+\texttt{synth\_overgen\_factor} & 1.5 & Over-generate candidates before filtering & \texttt{src/model.py:945,1150} \\
+\texttt{synth\_ratio\_range} & (0.35, 0.65) & Two-parent exchanged gene fraction interval & \texttt{src/model.py:946,531--541} \\
+\texttt{synth\_p\_three\_parent} & 0.25 & Probability of three-parent synthesis mode & \texttt{src/model.py:947,545--566} \\
+\texttt{synth\_parts\_three} & (0.3, 0.4, 0.3) & Three contiguous segment proportions & \texttt{src/model.py:948,545--566} \\
+\texttt{synth\_alpha}, \texttt{synth\_gamma} & 1.0, 1.0 & Radius and margin scaling in acceptance inequality & \texttt{src/model.py:949--950,615--631,762--763} \\
+Intra-class radius $\rho_{d,c}$ & 95th percentile distance & $\rho_{d,c}=Q_{0.95}\left(\|x-\mu_{d,c}\|_2\right)$, with fallback $+\infty$ for low support & \texttt{src/model.py:571--594} \\
+Nearest other-class margin $\delta_{d,c}$ & donor-local min center distance & $\delta_{d,c}=\min_{c'\neq c}\|\mu_{d,c}-\mu_{d,c'}\|_2$, fallback $+\infty$ when undefined & \texttt{src/model.py:571--608} \\
+Acceptance filter & inequality rule & Keep synthetic sample iff $\|\tilde{x}-\mu_{d,c}\|_2 \le \min(\alpha \rho_{d,c},\gamma \delta_{d,c})$ & \texttt{src/model.py:615--631} \\
+\bottomrule
+\end{tabular}
+\normalsize
+\end{table}
+
+\end{document}

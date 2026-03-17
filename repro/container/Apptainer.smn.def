@@ -1,0 +1,17 @@
+Bootstrap: docker
+From: mambaorg/micromamba:2.0.5
+
+%files
+    repro/locks/environment-smn.yml /tmp/environment-smn.yml
+    repro/locks/pip-freeze-smn.txt /tmp/pip-freeze-smn.txt
+
+%post
+    micromamba create -y -n smn -f /tmp/environment-smn.yml
+    micromamba run -n smn python -m pip install --no-deps -r /tmp/pip-freeze-smn.txt
+    micromamba clean -a -y
+
+%environment
+    export MAMBA_DOCKERFILE_ACTIVATE=1
+
+%runscript
+    exec micromamba run -n smn python "$@"

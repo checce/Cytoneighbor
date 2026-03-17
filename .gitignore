@@ -1,0 +1,22 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE / local tooling
+.idea/
+.kiro/
+
+# Large local artifacts
+data/
+results/
+Paper_Figures/
+
+# Logs and temp files
+*.log
+tmp_*.py
+
+# OS files
+.DS_Store
+Thumbs.db

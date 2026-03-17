@@ -1,0 +1,26 @@
+category,item,value,provenance,sha256,note
+runtime,python,3.10.18,"repro/locks/conda-list-smn.txt",,Primary interpreter in smn
+runtime,platform,Windows-10-10.0.26200-SP0,"repro/locks/runtime-smn.txt",C62C99F18B792E87B4EB836D8C3434964D53BC35A73DBBC3BEECE34D454115AA,Host platform snapshot
+core_pkg,torch,2.8.0+cu129,"repro/locks/conda-list-smn.txt",,Cytoneighbor training/inference
+core_pkg,scanpy,1.10.3,"repro/locks/conda-list-smn.txt",,Graph and AnnData workflows
+core_pkg,anndata,0.11.4,"repro/locks/conda-list-smn.txt",,Data container
+core_pkg,faiss-cpu,1.8.0,"repro/locks/conda-list-smn.txt",,HNSW retrieval backend
+baseline_pkg,scvi-tools,1.3.3,"repro/locks/conda-list-smn.txt",,scVI/scANVI/scArches baseline stack
+baseline_pkg,scarches,0.6.1,"repro/locks/conda-list-smn.txt",,scArches wrapper dependency
+baseline_pkg,celltypist,1.6.3,"repro/locks/conda-list-smn.txt",,CellTypist baseline
+baseline_pkg,bbknn,1.6.0,"repro/locks/conda-list-smn.txt",,Integration baseline
+baseline_pkg,harmonypy,0.0.10,"repro/locks/conda-list-smn.txt",,Harmony baseline
+baseline_pkg,Seurat,5.3.0,"repro/locks/r-session-smn.txt",37E2E900485C9A4D9D1023C4C2354D819FFA3142E2AAD405F40EC889B0EAD666,R baseline package
+baseline_pkg,SingleR,2.8.0,"repro/locks/r-session-smn.txt",37E2E900485C9A4D9D1023C4C2354D819FFA3142E2AAD405F40EC889B0EAD666,R baseline package
+baseline_pkg,SciBet_wrapper,run_scibet.R,"experiments/PartA/NetWork/run_scibet.R",,Wrapper script pinned by git tag
+lockfile,conda-explicit-smn,repro/locks/conda-explicit-smn.txt,repro/locks/conda-explicit-smn.txt,AC5C9B9F55F0F4324CF8F787F39E2836920E17DC2DD35ABEFEE7EEC402FDC84F,Conda explicit lock
+lockfile,conda-list-smn,repro/locks/conda-list-smn.txt,repro/locks/conda-list-smn.txt,9A9A2692FD7446C7A259C8BD5FF0220B651E2D5DEEC65A6062CC6F8ECD552C7E,Conda package snapshot
+lockfile,environment-smn,repro/locks/environment-smn.yml,repro/locks/environment-smn.yml,58869E0199E93AF624455A98864B81DD671240D67E7D12F4442136F0339192EB,Conda env export without builds
+lockfile,pip-freeze-smn,repro/locks/pip-freeze-smn.txt,repro/locks/pip-freeze-smn.txt,F4EEA7E29E66A76EAA2084FD179395325FE9C90372FD96BE1381EF8CD3D0F1CA,Pip lock snapshot
+lockfile,r-session-smn,repro/locks/r-session-smn.txt,repro/locks/r-session-smn.txt,37E2E900485C9A4D9D1023C4C2354D819FFA3142E2AAD405F40EC889B0EAD666,R runtime and package versions
+lockfile,runtime-smn,repro/locks/runtime-smn.txt,repro/locks/runtime-smn.txt,C62C99F18B792E87B4EB836D8C3434964D53BC35A73DBBC3BEECE34D454115AA,Python runtime snapshot
+container_recipe,Dockerfile.smn,repro/container/Dockerfile.smn,repro/container/Dockerfile.smn,741305EFA00374CBA4C1CF2C970F225CA8167008DC18C30393F1A8EDEA7903DC,Recipe hash for immutable container definition
+container_recipe,Apptainer.smn.def,repro/container/Apptainer.smn.def,repro/container/Apptainer.smn.def,4385491983BF9A9ECCFE269130908E77A02E91A06BC2FF825BCB7D413585405E,Recipe hash for immutable container definition
+container_recipe,container-readme,repro/container/README.md,repro/container/README.md,42B5121862C87FB4C21FD38865A78AAA52F7575E0ABE44155E08D9D0A69E09F4,Build and digest instructions
+git,pinned_tag,submission-v1-freeze,git tag,,"Freeze tag created in this revision"
+git,previous_state,no_tag_no_commit,git status before patch,,"No historical tag/commit was present; remediation documented in Supplementary Table S2"
