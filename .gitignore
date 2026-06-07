@@ -1,22 +1,68 @@
-# Python cache
+﻿# --- Python bytecode and packaging ---
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
-*.pyd
+*.egg-info/
+*.egg
+.eggs/
+dist/
+build/
+*.so
 
-# IDE / local tooling
+# --- Jupyter ---
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# --- IDE ---
 .idea/
-.kiro/
+.vscode/
+*.swp
+*.swo
+*~
 
-# Large local artifacts
-data/
-results/
-Paper_Figures/
-
-# Logs and temp files
-*.log
-tmp_*.py
-
-# OS files
+# --- OS files ---
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# --- Data files (download separately) ---
+data/*.h5ad
+data/*.h5
+!data/README.md
+datasets/
+
+# --- Experiment outputs (generated at runtime) ---
+results/*
+!results/README.md
+outputs/
+models/
+checkpoints/
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Reproducibility locks (generated) ---
+repro/locks/conda-explicit-smn.txt
+repro/locks/conda-list-smn.txt
+repro/locks/pip-freeze-smn.txt
+repro/locks/r-session-smn.txt
+
+# --- Temporary files ---
+tmp_*/
+*.tmp
+*.bak
+*_backup.*
+
+# --- Presentation files ---
+*.pptx
+
+# --- Paper build artifacts ---
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.bbl
+paper/*.blg
+paper/*.synctex.gz
+paper/*.fdb_latexmk
+paper/*.fls

@@ -12,10 +12,10 @@ from pathlib import Path
 from typing import Dict, Any
 
 # Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+# cytoneighbor package installed via pip install -e .
 
-from src.utils import ConfigManager, setup_logging, ensure_output_dir
-from src.trainer import CytoneighborWrapper, TrainingManager
+from cytoneighbor.utils import ConfigManager, setup_logging, ensure_output_dir
+from cytoneighbor.trainer import CytoneighborWrapper, TrainingManager
 
 
 def setup_experiment_environment(config_path: str = "configs/config.yaml") -> Dict[str, Any]:
@@ -46,7 +46,7 @@ def setup_experiment_environment(config_path: str = "configs/config.yaml") -> Di
 def run_benchmark_resolution(config: Dict[str, Any]) -> None:
     """Run the benchmark resolution experiment."""
     from experiments.benchmark_resolution import BenchmarkResolutionExperiment
-    from src.utils import DataLoader, MetricsCalculator, VisualizationEngine
+    from cytoneighbor.utils import DataLoader, MetricsCalculator, VisualizationEngine
     
     # Initialize components
     data_loader = DataLoader()
@@ -68,7 +68,7 @@ def run_benchmark_resolution(config: Dict[str, Any]) -> None:
 def run_mechanism_analysis(config: Dict[str, Any]) -> None:
     """Run the mechanism analysis experiment."""
     from experiments.mechanism_analysis import MechanismAnalysisExperiment
-    from src.utils import DataLoader, MetricsCalculator, VisualizationEngine
+    from cytoneighbor.utils import DataLoader, MetricsCalculator, VisualizationEngine
     
     # Initialize components
     data_loader = DataLoader()
@@ -106,7 +106,7 @@ def run_disease_discovery(config: Dict[str, Any]) -> None:
 def run_spatial_validation(config: Dict[str, Any]) -> None:
     """Run the spatial validation experiment."""
     from experiments.spatial_validation import SpatialValidationExperiment
-    from src.utils import DataLoader, MetricsCalculator, VisualizationEngine
+    from cytoneighbor.utils import DataLoader, MetricsCalculator, VisualizationEngine
     
     # Initialize components
     data_loader = DataLoader()

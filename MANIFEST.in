@@ -1,0 +1,25 @@
+# Include non-Python files in the source distribution
+include README.md
+include LICENSE
+include pyproject.toml
+
+# Include reproducibility assets
+recursive-include repro *.csv *.json *.yml *.txt *.md
+recursive-include configs *.yaml *.yml
+
+# Include tutorials
+recursive-include tutorials *.ipynb
+
+# Include test data
+recursive-include tests *.py
+
+# Exclude development artifacts
+prune .github
+prune experiments
+prune scripts
+prune paper
+prune data
+prune results
+global-exclude __pycache__
+global-exclude *.pyc
+global-exclude .DS_Store

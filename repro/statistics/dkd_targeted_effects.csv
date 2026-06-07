@@ -1,0 +1,4 @@
+family,endpoint_id,effect_type,effect_value,ci95_low,ci95_high,p_value,q_value,evidence_level
+DKD targeted,SLC5A2_within_S1S2_DKD_gt_Healthy,Mann-Whitney U (pre-specified directional test),,,,,,Targeted test specified in pipeline/report; raw test output not retained in experiment_results.json.
+DKD targeted,FunctionalScore_cluster0_minus_cluster2,Descriptive difference,0.732451781630516,,,,,Descriptive state-level summary from exported DKD characterization.
+DKD targeted,InjuryScore_cluster2_minus_cluster0,Descriptive difference,0.623396759852767,,,,,Descriptive state-level summary from exported DKD characterization.

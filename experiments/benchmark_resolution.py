@@ -5,6 +5,7 @@ Enhanced with difficulty gradient analysis: CD4 (Easy) → CD8 (Medium) → NK (
 """
 
 import os
+import json
 import copy  # [FIX Issue #7] deepcopy prevents shared nn.Module GPU reference across AnnData objects
 import numpy as np
 import pandas as pd
@@ -13,29 +14,31 @@ import matplotlib.pyplot as plt
 from typing import Dict, Any, List, Tuple
 import logging
 
-from src.utils import BaseExperiment, DataLoader, MetricsCalculator, VisualizationEngine
-from src.trainer import CytoneighborWrapper
-
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from cytoneighbor.utils import BaseExperiment, DataLoader, MetricsCalculator, VisualizationEngine
+from cytoneighbor.trainer import CytoneighborWrapper
 # =============================================================================
 # [NEW] Publication-ready font settings (Nature Methods standard)
 # =============================================================================
 try:
     from scifont import set_font
-    # 使用 Helvetica/Arial 以符合 Nature Methods 的标准无衬线字体要求
+    # Use Helvetica/Arial to meet Nature Methods standard sans-serif font requirements
     set_font(font_name="Helvetica")
     print("[Success] SciFont loaded. Publication-ready fonts enabled.")
 except ImportError:
     print("[Warning] 'scifont' library not found. Falling back to default matplotlib fonts.")
     print("Consider running: pip install scifont")
-    # 回退到 Nature 兼容参数
+    # Fallback to Nature-compatible parameters
     plt.rcParams.update({
         'font.family': 'sans-serif',
         'font.sans-serif': ['Arial', 'Helvetica', 'DejaVu Sans'],
-        'pdf.fonttype': 42,  # TrueType, 便于 Illustrator 编辑
+        'pdf.fonttype': 42,  # TrueType, facilitates Illustrator editing
         'ps.fonttype': 42,
         'svg.fonttype': 'none'
     })
-# --- 全局字体与线宽调整 ---
+# --- Global font and line width adjustment ---
 plt.rcParams.update({
     'font.size': 7,
     'axes.titlesize': 8,
@@ -79,6 +82,124 @@ class BenchmarkResolutionExperiment(BaseExperiment):
         # Ensure output directory exists
         self.output_dir = os.path.join("results", "benchmark_resolution")
         os.makedirs(self.output_dir, exist_ok=True)
+
+    def _save_figure_pair(self, fig: plt.Figure, stem: str) -> None:
+        """Save a matplotlib figure as both PDF and PNG for manuscript assembly."""
+        pdf_path = os.path.join(self.output_dir, f"{stem}.pdf")
+        png_path = os.path.join(self.output_dir, f"{stem}.png")
+        fig.savefig(pdf_path, dpi=300, bbox_inches='tight', format='pdf')
+        fig.savefig(png_path, dpi=300, bbox_inches='tight', format='png')
+        plt.close(fig)
+        self.logger.info(f"Saved: {pdf_path}")
+        self.logger.info(f"Saved: {png_path}")
+
+    def _save_publication_raw_assets(
+        self,
+        results: Dict[str, Dict[str, Any]],
+        test_data: sc.AnnData,
+        metrics_results: Dict[str, Any],
+        umap_coords: Dict[str, np.ndarray]
+    ) -> None:
+        """Persist fine-grained raw data needed for figure recomposition."""
+        true_labels = test_data.obs[self.cell_type_column].astype(str).values
+        batch_labels = test_data.obs[self.batch_column].astype(str).values
+        obs_names = test_data.obs_names.astype(str)
+
+        overall_rows = []
+        for method_name, method_metrics in metrics_results['metrics'].items():
+            for metric_name, value in method_metrics.items():
+                overall_rows.append({
+                    'method': method_name,
+                    'metric': metric_name,
+                    'value': float(value)
+                })
+        pd.DataFrame(overall_rows).to_csv(
+            os.path.join(self.output_dir, 'overall_metrics_long.csv'),
+            index=False
+        )
+
+        per_class_rows = []
+        for method_name, method_scores in metrics_results['per_class_f1'].items():
+            for cell_type, value in method_scores.items():
+                per_class_rows.append({
+                    'method': method_name,
+                    'cell_type': cell_type,
+                    'f1_score': float(value)
+                })
+        pd.DataFrame(per_class_rows).to_csv(
+            os.path.join(self.output_dir, 'per_class_f1_long.csv'),
+            index=False
+        )
+
+        confusion_rows = []
+        for method_name, confusion_metrics in metrics_results['nkt_confusion_analysis'].items():
+            if not confusion_metrics:
+                continue
+            confusion_rows.append({
+                'method': method_name,
+                'error_nkt_to_nk': float(confusion_metrics.get('error_nkt_to_nk', 0.0)),
+                'count_nkt_to_nk': int(confusion_metrics.get('count_nkt_to_nk', 0)),
+                'error_nkt_to_cd8': float(confusion_metrics.get('error_nkt_to_cd8', 0.0)),
+                'count_nkt_to_cd8': int(confusion_metrics.get('count_nkt_to_cd8', 0)),
+                'error_nkt_to_other': float(confusion_metrics.get('error_nkt_to_other', 0.0)),
+                'count_nkt_to_other': int(confusion_metrics.get('count_nkt_to_other', 0)),
+                'total_nkt': int(confusion_metrics.get('total_nkt', 0)),
+            })
+        pd.DataFrame(confusion_rows).to_csv(
+            os.path.join(self.output_dir, 'nkt_confusion_summary.csv'),
+            index=False
+        )
+
+        prediction_rows = []
+        for method_name, method_results in results.items():
+            predictions = method_results['predictions'].astype(str)
+            for idx, obs_name in enumerate(obs_names):
+                prediction_rows.append({
+                    'cell_id': obs_name,
+                    'method': method_name,
+                    'true_label': true_labels[idx],
+                    'predicted_label': predictions[idx],
+                    'batch': batch_labels[idx]
+                })
+        pd.DataFrame(prediction_rows).to_csv(
+            os.path.join(self.output_dir, 'predictions_long.csv'),
+            index=False
+        )
+
+        umap_rows = []
+        for method_name, coords in umap_coords.items():
+            predictions = results[method_name]['predictions'].astype(str)
+            for idx, obs_name in enumerate(obs_names):
+                umap_rows.append({
+                    'cell_id': obs_name,
+                    'method': method_name,
+                    'umap1': float(coords[idx, 0]),
+                    'umap2': float(coords[idx, 1]),
+                    'true_label': true_labels[idx],
+                    'predicted_label': predictions[idx],
+                    'batch': batch_labels[idx]
+                })
+        pd.DataFrame(umap_rows).to_csv(
+            os.path.join(self.output_dir, 'umap_coords_long.csv'),
+            index=False
+        )
+
+        detailed_payload = {
+            'metrics': metrics_results['metrics'],
+            'per_class_f1': metrics_results['per_class_f1'],
+            'nkt_confusion_analysis': metrics_results['nkt_confusion_analysis']
+        }
+        def _json_default(obj):
+            if isinstance(obj, (np.integer,)):
+                return int(obj)
+            if isinstance(obj, (np.floating,)):
+                return float(obj)
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+            raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+        with open(os.path.join(self.output_dir, 'publication_metrics_detail.json'), 'w', encoding='utf-8') as f:
+            json.dump(detailed_payload, f, indent=2, default=_json_default)
+        self.logger.info("Saved publication-ready raw assets for Figure 4 recomposition.")
 
     # def load_and_preprocess_data(self) -> Tuple[sc.AnnData, sc.AnnData, sc.AnnData]:
     #     """
@@ -296,7 +417,7 @@ class BenchmarkResolutionExperiment(BaseExperiment):
         """
         self.logger.info("Running Cytoneighbor workflow...")
 
-        from src.utils import ConfigManager
+        from cytoneighbor.utils import ConfigManager
         config_manager = ConfigManager()
         model_config = config_manager.get_model_params()
 
@@ -329,7 +450,7 @@ class BenchmarkResolutionExperiment(BaseExperiment):
             model.adata.uns.get('cytoneighbor', {})
         )
 
-        from src.model import transform
+        from cytoneighbor.model import transform
         transform(
             combined_for_transform,
             n_neighbors=self.n_neighbors,
@@ -338,18 +459,18 @@ class BenchmarkResolutionExperiment(BaseExperiment):
         )
 
         # =======================================================================
-        # [CRITICAL FIX] 在全局图上直接计算 UMAP，避免测试集孤立节点导致崩溃
+        # [CRITICAL FIX] Compute UMAP on global embedding to avoid crashes from isolated test-set nodes
         # =======================================================================
         self.logger.info("Computing UMAP on full connected relational graph...")
-        # 强行删除可能继承来的 X_pca，防止 Scanpy 误传给 UMAP 导致维度冲突
+        # Force-remove inherited X_pca to prevent Scanpy from passing it to UMAP causing dimension conflicts
         if 'X_pca' in combined_for_transform.obsm:
             del combined_for_transform.obsm['X_pca']
             
-        # 使用 init_pos='random' 彻底避开谱聚类初始化在预计算图上的 Bug
+        # Use init_pos='random' to completely avoid spectral clustering initialization bug on precomputed graphs
         sc.tl.umap(combined_for_transform, random_state=42, init_pos='random')
         # =======================================================================
 
-        # 提取测试集子图与坐标
+        # Extract test-set subgraph and coordinates
         test_mask_bool = combined_for_transform.obs['_cytoneighbor_split'] == 'test'
         test_transformed = combined_for_transform[test_mask_bool].copy()
 
@@ -541,20 +662,20 @@ class BenchmarkResolutionExperiment(BaseExperiment):
 
         try:
             import harmony
-            # 或者 from harmony import harmonize
+            # Or: from harmony import harmonize
 
-            # Harmony 需要 PCA 输入
+            # Harmony requires PCA input
             combined_data = sc.concat([train_data, test_data])
             combined_data.obs['split'] = ['train'] * train_data.n_obs + ['test'] * test_data.n_obs
 
-            # 预处理 + PCA (random_state=42 fixed for reproducibility — Completion Point #1)
+            # Preprocessing + PCA (random_state=42 fixed for reproducibility)
             sc.pp.scale(combined_data, max_value=10)
             sc.tl.pca(combined_data, n_comps=50, random_state=42)
 
-            # 运行 Harmony
-            # 注意：这里使用 scanpy 的外部接口或者 harmony-pytorch
-            # 为了通用性，这里演示使用 scanpy 的 external 接口 (需要 pip install scanpy[external])
-            # 如果没有，可以使用 harmony-pytorch 手动调用
+            # Run Harmony
+            # Note: using scanpy external interface or harmony-pytorch
+            # For generality, demonstrate using scanpy external interface (requires pip install scanpy[external])
+            # If unavailable, use harmony-pytorch manually
             try:
                 sc.external.pp.harmony_integrate(combined_data, key=self.batch_column, basis='X_pca', adjusted_basis='X_harmony')
             except:
@@ -573,14 +694,14 @@ class BenchmarkResolutionExperiment(BaseExperiment):
             test_copy = test_data.copy()
             test_copy.obsm['X_harmony'] = test_harmony
 
-            # 必须补全 obs 列供 LISI 计算
+            # Must populate obs columns for LISI calculation
             test_copy.obs[self.cell_type_column] = test_data.obs[self.cell_type_column].copy()
             test_copy.obs[self.batch_column] = test_data.obs[self.batch_column].copy()
 
-            # 建图
+            # Build graph
             sc.pp.neighbors(test_copy, use_rep='X_harmony', n_neighbors=self.n_neighbors)
 
-            # KNN 预测 (用于计算 Accuracy/F1)
+            # KNN prediction (for Accuracy/F1 calculation)
             from sklearn.neighbors import KNeighborsClassifier
             train_harmony = combined_data.obsm['X_harmony'][~test_mask]
             train_labels = train_data.obs[self.cell_type_column].values
@@ -852,7 +973,7 @@ class BenchmarkResolutionExperiment(BaseExperiment):
     def _calculate_nkt_confusion(self, true_labels: np.ndarray,
                                  predictions: np.ndarray) -> Dict[str, float]:
         """
-        ENHANCED: Calculate NKT confusion rates (NKT→NK and NKT→CD8).
+        ENHANCED: Calculate NKT confusion rates (NKT->NK, NKT->CD8, and NKT->other).
 
         Args:
             true_labels: Ground truth labels
@@ -861,49 +982,35 @@ class BenchmarkResolutionExperiment(BaseExperiment):
         Returns:
             Dictionary with confusion metrics
         """
-        from sklearn.metrics import confusion_matrix
-
-        # Convert to string for consistent comparison
         true_labels_str = true_labels.astype(str)
         predictions_str = predictions.astype(str)
 
-        # Check if NKT cells exist
         if 'NKT cells' not in true_labels_str:
             self.logger.warning("NKT cells not found in data, skipping confusion analysis")
             return {}
 
-        # Build confusion matrix
-        cm = confusion_matrix(true_labels_str, predictions_str, labels=self.target_subtypes)
-
-        # Find indices
-        try:
-            nkt_idx = self.target_subtypes.index('NKT cells')
-            nk_idx = self.target_subtypes.index('NK cells') if 'NK cells' in self.target_subtypes else None
-            cd8_idx = self.target_subtypes.index('CD8+ T cells') if 'CD8+ T cells' in self.target_subtypes else None
-        except ValueError:
+        nkt_mask = true_labels_str == 'NKT cells'
+        total_nkt = int(np.sum(nkt_mask))
+        if total_nkt == 0:
             return {}
 
-        # Calculate confusion rates
-        total_nkt = np.sum(cm[nkt_idx, :])
+        nkt_predictions = predictions_str[nkt_mask]
+        count_nkt_to_nk = int(np.sum(nkt_predictions == 'NK cells'))
+        count_nkt_to_cd8 = int(np.sum(nkt_predictions == 'CD8+ T cells'))
+        count_nkt_to_other = int(np.sum(~np.isin(
+            nkt_predictions,
+            ['NKT cells', 'NK cells', 'CD8+ T cells']
+        )))
 
-        confusion_metrics = {}
-
-        if total_nkt > 0:
-            # NKT → NK error rate
-            if nk_idx is not None:
-                error_nkt_to_nk = cm[nkt_idx, nk_idx] / total_nkt
-                confusion_metrics['error_nkt_to_nk'] = error_nkt_to_nk
-                confusion_metrics['count_nkt_to_nk'] = cm[nkt_idx, nk_idx]
-
-            # NKT → CD8 error rate
-            if cd8_idx is not None:
-                error_nkt_to_cd8 = cm[nkt_idx, cd8_idx] / total_nkt
-                confusion_metrics['error_nkt_to_cd8'] = error_nkt_to_cd8
-                confusion_metrics['count_nkt_to_cd8'] = cm[nkt_idx, cd8_idx]
-
-            confusion_metrics['total_nkt'] = total_nkt
-
-        return confusion_metrics
+        return {
+            'total_nkt': total_nkt,
+            'count_nkt_to_nk': count_nkt_to_nk,
+            'error_nkt_to_nk': count_nkt_to_nk / total_nkt,
+            'count_nkt_to_cd8': count_nkt_to_cd8,
+            'error_nkt_to_cd8': count_nkt_to_cd8 / total_nkt,
+            'count_nkt_to_other': count_nkt_to_other,
+            'error_nkt_to_other': count_nkt_to_other / total_nkt,
+        }
 
     def visualize_results(self, results: Dict[str, Dict[str, Any]],
                           test_data: sc.AnnData,
@@ -927,7 +1034,7 @@ class BenchmarkResolutionExperiment(BaseExperiment):
                 test_transformed = method_results['test_transformed']
                 
                 # ===============================================================
-                # [CRITICAL FIX] 直接获取刚才计算好的 UMAP 坐标，不再重复运行
+                # [CRITICAL FIX] Directly retrieve pre-computed UMAP coordinates, avoid re-running
                 # ===============================================================
                 if 'X_umap' not in test_transformed.obsm:
                     self.logger.warning("X_umap not found. Computing test-only UMAP as fallback.")
@@ -944,14 +1051,19 @@ class BenchmarkResolutionExperiment(BaseExperiment):
                 
             umap_coords[method_name] = coords
 
-        # --- Individual standalone PDFs (preserved for granular use) ---
-        self._plot_umap_comparison_global(umap_coords, true_labels, results)
-        self._plot_umap_zoom_nk_nkt(umap_coords, true_labels, results)
-        self._plot_confusion_matrix_comparison(results, true_labels)
-        self._plot_f1_score_gradient(metrics_results['per_class_f1'])
+        self._save_publication_raw_assets(results, test_data, metrics_results, umap_coords)
 
-        # --- [NEW] Composite A4 publication figure (Panels A–F on one canvas) ---
-        self._generate_composite_figure_a4(umap_coords, true_labels, results, metrics_results)
+        # FIGURE 1: Global UMAP Comparison (all 4 cell types)
+        self._plot_umap_comparison_global(umap_coords, true_labels, results)
+
+        # FIGURE 2: Zoomed UMAP (NK and NKT only)
+        self._plot_umap_zoom_nk_nkt(umap_coords, true_labels, results)
+
+        # FIGURE 3: Confusion Matrix Comparison
+        self._plot_confusion_matrix_comparison(results, true_labels)
+
+        # FIGURE 4: F1 Score Gradient (Difficulty Analysis)
+        self._plot_f1_score_gradient(metrics_results['per_class_f1'])
 
         self.logger.info("All visualizations generated successfully (PDF format)")
 
@@ -993,11 +1105,7 @@ class BenchmarkResolutionExperiment(BaseExperiment):
                      fontsize=8, fontweight='bold', y=1.02)
         plt.tight_layout()
 
-        output_path = os.path.join(self.output_dir, 'umap_comparison_global.pdf')
-        plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
-        plt.close()
-
-        self.logger.info(f"Saved: {output_path}")
+        self._save_figure_pair(fig, 'umap_comparison_global')
 
     def _plot_umap_zoom_nk_nkt(self, umap_coords: Dict[str, np.ndarray],
                                true_labels: np.ndarray,
@@ -1043,11 +1151,7 @@ class BenchmarkResolutionExperiment(BaseExperiment):
                      fontsize=8, fontweight='bold', y=1.02)
         plt.tight_layout()
 
-        output_path = os.path.join(self.output_dir, 'umap_zoom_nk_nkt.pdf')
-        plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
-        plt.close()
-
-        self.logger.info(f"Saved: {output_path}")
+        self._save_figure_pair(fig, 'umap_zoom_nk_nkt')
 
     def _plot_confusion_matrix_comparison(self, results: Dict[str, Dict[str, Any]],
                                           true_labels: np.ndarray) -> None:
@@ -1095,11 +1199,7 @@ class BenchmarkResolutionExperiment(BaseExperiment):
                      fontsize=8, fontweight='bold', y=1.02)
         plt.tight_layout()
 
-        output_path = os.path.join(self.output_dir, 'confusion_matrix_comparison.pdf')
-        plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
-        plt.close()
-
-        self.logger.info(f"Saved: {output_path}")
+        self._save_figure_pair(fig, 'confusion_matrix_comparison')
 
     def _plot_f1_score_gradient(self, per_class_f1: Dict[str, Dict[str, float]]) -> None:
         """
@@ -1153,397 +1253,7 @@ class BenchmarkResolutionExperiment(BaseExperiment):
 
         plt.tight_layout()
 
-        output_path = os.path.join(self.output_dir, 'f1_score_gradient.pdf')
-        plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
-        plt.close()
-
-        self.logger.info(f"Saved: {output_path}")
-
-    # =========================================================================
-    # Composite A4 publication figure  (Panels A – F on one canvas)
-    # =========================================================================
-
-    def _generate_composite_figure_a4(
-        self,
-        umap_coords: Dict[str, np.ndarray],
-        true_labels: np.ndarray,
-        results: Dict[str, Dict[str, Any]],
-        metrics_results: Dict[str, Any],
-    ) -> None:
-        """
-        Render all six panels onto a single A4 portrait canvas and save as PDF.
-
-        Canvas layout (top → bottom):
-          A  – UMAP global comparison        (full width, n_methods sub-panels)
-          B  – UMAP zoom NK vs NKT           (full width, n_methods sub-panels)
-          C  – Confusion-matrix heatmaps     (full width, n_methods sub-panels)
-          ─────────────────────────────────────────────────────────────────────
-          D  (left ~55%)  F1 difficulty gradient grouped bar chart
-          E  (right ~45%, upper half)  NKT misclassification grouped bars
-          F  (right ~45%, lower half)  Robustness horizontal bar chart
-
-        Panel letters are rendered in the top-left corner of each panel's
-        first sub-axes using the standard Nature Methods bold 8 pt style.
-        """
-        import seaborn as sns
-        import matplotlib.ticker as mticker
-        import matplotlib.patches as mpatches
-        from sklearn.metrics import confusion_matrix as sk_cm
-
-        self.logger.info("Building composite A4 figure (Panels A–F)...")
-
-        # ── colour palette ────────────────────────────────────────────────────
-        CELL_COLORS = {
-            'CD4+ T cells': '#1f77b4',
-            'CD8+ T cells': '#ff7f0e',
-            'NK cells':     '#2ca02c',
-            'NKT cells':    '#d62728',
-        }
-        # Bang-Wong palette keyed by method name (falls back to grey)
-        WONG_METHOD = {
-            'Cytoneighbor': '#D55E00',
-            'scVI':         '#0072B2',
-            'Seurat':       '#E69F00',
-            'Harmony':      '#999999',
-        }
-
-        n_methods = len(results)
-        methods_ordered = list(results.keys())
-
-        # ── A4 canvas ────────────────────────────────────────────────────────
-        A4_W, A4_H = 8.268, 11.693          # inches (210 × 297 mm)
-        fig = plt.figure(figsize=(A4_W, A4_H), dpi=300)
-
-        # ── master GridSpec: 4 rows ──────────────────────────────────────────
-        # height_ratios tuned so A/B/C are roughly equal and the bottom strip
-        # gives D/E/F enough room for legends + labels.
-        gs_main = fig.add_gridspec(
-            4, 1,
-            height_ratios=[1.85, 1.85, 2.30, 2.80],
-            hspace=0.52,
-            left=0.07, right=0.97,
-            top=0.975, bottom=0.025,
-        )
-
-        # helper: stamp panel letter on the first axis of a row
-        def _stamp(ax, letter, dx=-0.10, dy=1.10):
-            ax.text(dx, dy, letter,
-                    transform=ax.transAxes,
-                    fontsize=10, fontweight='bold',
-                    va='bottom', ha='left', color='black',
-                    clip_on=False)
-
-        # ── Panel A: UMAP global ──────────────────────────────────────────────
-        gs_A = gs_main[0].subgridspec(1, n_methods, wspace=0.30)
-        axes_A = [fig.add_subplot(gs_A[i]) for i in range(n_methods)]
-        _stamp(axes_A[0], 'A')
-        nk_nkt_mask_bool = np.isin(true_labels.astype(str), ['NK cells', 'NKT cells'])
-        for idx, (method_name, coords) in enumerate(umap_coords.items()):
-            ax = axes_A[idx]
-            for ct in self.target_subtypes:
-                mask = true_labels.astype(str) == ct
-                ax.scatter(coords[mask, 0], coords[mask, 1],
-                           c=CELL_COLORS.get(ct, '#7f7f7f'),
-                           label=ct, s=3, alpha=0.55, linewidths=0, rasterized=True)
-            ax.set_title(method_name, fontsize=7, fontweight='bold', pad=2)
-            ax.set_xlabel('UMAP 1', fontsize=6)
-            ax.set_ylabel('UMAP 2', fontsize=6)
-            ax.tick_params(labelsize=5)
-            if idx == n_methods - 1:
-                leg = ax.legend(loc='upper right', fontsize=4.5,
-                                markerscale=2.5, framealpha=0.8,
-                                edgecolor='none', handletextpad=0.3,
-                                borderpad=0.4)
-            ax.grid(True, alpha=0.15, linewidth=0.3)
-        # shared suptitle for row A (placed inside first subplot)
-        axes_A[n_methods // 2].set_title(
-            'Resolution Comparison: All Lymphocyte Subtypes',
-            fontsize=6.5, color='#555555', pad=12
-        )
-
-        # ── Panel B: UMAP zoom NK/NKT ─────────────────────────────────────────
-        gs_B = gs_main[1].subgridspec(1, n_methods, wspace=0.30)
-        axes_B = [fig.add_subplot(gs_B[i]) for i in range(n_methods)]
-        _stamp(axes_B[0], 'B')
-        for idx, (method_name, coords) in enumerate(umap_coords.items()):
-            ax = axes_B[idx]
-            nk_mask  = true_labels.astype(str) == 'NK cells'
-            nkt_mask = true_labels.astype(str) == 'NKT cells'
-            if nk_mask.any():
-                ax.scatter(coords[nk_mask, 0],  coords[nk_mask, 1],
-                           c='#2ca02c', label='NK cells',  s=5, alpha=0.65,
-                           linewidths=0, rasterized=True)
-            if nkt_mask.any():
-                ax.scatter(coords[nkt_mask, 0], coords[nkt_mask, 1],
-                           c='#d62728', label='NKT cells', s=5, alpha=0.65,
-                           linewidths=0, rasterized=True)
-            ax.set_title(f'{method_name}\n(NK vs NKT)', fontsize=6.5,
-                         fontweight='bold', pad=2)
-            ax.set_xlabel('UMAP 1', fontsize=6)
-            ax.set_ylabel('UMAP 2', fontsize=6)
-            ax.tick_params(labelsize=5)
-            if idx == n_methods - 1:
-                ax.legend(loc='upper right', fontsize=4.5, markerscale=2.5,
-                          framealpha=0.8, edgecolor='none',
-                          handletextpad=0.3, borderpad=0.4)
-            ax.grid(True, alpha=0.15, linewidth=0.3)
-
-        # ── Panel C: Confusion matrices ────────────────────────────────────────
-        gs_C = gs_main[2].subgridspec(1, n_methods, wspace=0.40)
-        axes_C = [fig.add_subplot(gs_C[i]) for i in range(n_methods)]
-        _stamp(axes_C[0], 'C', dx=-0.12, dy=1.08)
-        tick_labels = [ct.replace(' ', '\n') for ct in self.target_subtypes]
-        for idx, (method_name, method_res) in enumerate(results.items()):
-            ax = axes_C[idx]
-            preds = method_res['predictions']
-            cm = sk_cm(true_labels.astype(str), preds.astype(str),
-                       labels=self.target_subtypes)
-            cm_pct = cm.astype(float) / cm.sum(axis=1, keepdims=True) * 100
-            sns.heatmap(
-                cm_pct, ax=ax,
-                annot=True, fmt='.1f', annot_kws={'size': 4.5},
-                cmap='RdYlBu_r', vmin=0, vmax=100,
-                xticklabels=tick_labels, yticklabels=tick_labels,
-                cbar=(idx == n_methods - 1),
-                cbar_kws={'label': '%', 'shrink': 0.8} if idx == n_methods - 1 else {},
-                linewidths=0.3, linecolor='white',
-            )
-            ax.set_title(method_name, fontsize=7, fontweight='bold', pad=3)
-            ax.set_xlabel('Predicted', fontsize=6)
-            ax.set_ylabel('True' if idx == 0 else '', fontsize=6)
-            ax.tick_params(labelsize=5)
-
-        # ── Bottom row: D (left) + E/F (right) ───────────────────────────────
-        gs_bot = gs_main[3].subgridspec(1, 2, width_ratios=[1.2, 1.0], wspace=0.42)
-
-        # Panel D – F1 difficulty gradient (grouped bar chart)
-        ax_D = fig.add_subplot(gs_bot[0])
-        _stamp(ax_D, 'D', dx=-0.13, dy=1.06)
-        self._draw_panel_D(ax_D, metrics_results['per_class_f1'],
-                           WONG_METHOD, methods_ordered)
-
-        # Panels E & F stacked in right column
-        gs_EF = gs_bot[1].subgridspec(2, 1, hspace=0.62)
-        ax_E = fig.add_subplot(gs_EF[0])
-        ax_F = fig.add_subplot(gs_EF[1])
-        self._draw_panel_E(ax_E, metrics_results['nkt_confusion_analysis'],
-                           WONG_METHOD, methods_ordered)
-        self._draw_panel_F(ax_F, metrics_results['per_class_f1'],
-                           WONG_METHOD, methods_ordered)
-
-        # ── Save ─────────────────────────────────────────────────────────────
-        out_path = os.path.join(self.output_dir, 'figure_experiment1B.pdf')
-        fig.savefig(out_path, format='pdf', dpi=300, bbox_inches='tight')
-        plt.close(fig)
-        self.logger.info(f"Composite A4 figure saved: {out_path}")
-
-    # ── Panel D helper ────────────────────────────────────────────────────────
-    def _draw_panel_D(
-        self,
-        ax,
-        per_class_f1: Dict[str, Dict[str, float]],
-        method_colors: Dict[str, str],
-        methods_ordered: List[str],
-    ) -> None:
-        """Grouped bar chart: F1 per cell type, grouped by difficulty (Easy→Hard)."""
-        import seaborn as sns
-
-        cell_types_ordered = [ct for ct in
-                              ['CD4+ T cells', 'CD8+ T cells', 'NK cells', 'NKT cells']
-                              if ct in self.target_subtypes]
-        short_labels = [ct.replace('+ T cells', '+T').replace(' cells', '')
-                        for ct in cell_types_ordered]
-
-        plot_data = []
-        for m in methods_ordered:
-            for ct, short in zip(cell_types_ordered, short_labels):
-                plot_data.append({
-                    'Method': m,
-                    'Cell Type': short,
-                    'F1 Score': per_class_f1.get(m, {}).get(ct, 0.0),
-                })
-        df = pd.DataFrame(plot_data)
-
-        palette = [method_colors.get(m, '#888888') for m in methods_ordered]
-        sns.barplot(data=df, x='Cell Type', y='F1 Score', hue='Method',
-                    palette=palette, ax=ax, width=0.75)
-
-        ax.set_title('Difficulty Gradient Analysis: Per-Class F1\n(Easy → Hard)',
-                     fontsize=7, fontweight='bold', pad=3)
-        ax.set_xlabel('Cell Type  (difficulty increases →)', fontsize=6, fontweight='bold')
-        ax.set_ylabel('F1 Score', fontsize=6)
-        ax.set_ylim(0, 1.08)
-        ax.tick_params(labelsize=5.5)
-        ax.legend(title='Method', fontsize=5, title_fontsize=5.5,
-                  loc='lower left', framealpha=0.85, edgecolor='none',
-                  ncol=2, handlelength=1.0, borderpad=0.4)
-        ax.grid(axis='y', alpha=0.25, linewidth=0.35)
-        ax.text(0.01, -0.16, 'EASY',    transform=ax.transAxes,
-                fontsize=5.5, color='#2a862a', fontweight='bold', ha='left')
-        ax.text(0.99, -0.16, 'EXTREME', transform=ax.transAxes,
-                fontsize=5.5, color='#cc2222', fontweight='bold', ha='right')
-
-    # ── Panel E helper ────────────────────────────────────────────────────────
-    def _draw_panel_E(
-        self,
-        ax,
-        nkt_confusion_analysis: Dict[str, Dict[str, float]],
-        method_colors: Dict[str, str],
-        methods_ordered: List[str],
-    ) -> None:
-        """
-        Grouped bar chart: NKT misclassification rates (NKT→NK solid,
-        NKT→CD8 hatched) per method.  Data is extracted live from
-        metrics_results['nkt_confusion_analysis'].
-        """
-        import matplotlib.ticker as mticker
-        import matplotlib.patches as mpatches
-
-        methods = [m for m in methods_ordered if m in nkt_confusion_analysis
-                   and nkt_confusion_analysis[m]]
-        if not methods:
-            ax.text(0.5, 0.5, 'NKT data\nnot available',
-                    ha='center', va='center', transform=ax.transAxes, fontsize=6)
-            ax.set_title('NKT Cell Misclassification', fontsize=7, fontweight='bold')
-            ax.text(-0.14, 1.08, 'E', transform=ax.transAxes,
-                    fontsize=9, fontweight='bold', va='bottom')
-            return
-
-        nk_vals  = [nkt_confusion_analysis[m].get('error_nkt_to_nk',  0) * 100
-                    for m in methods]
-        cd8_vals = [nkt_confusion_analysis[m].get('error_nkt_to_cd8', 0) * 100
-                    for m in methods]
-        colors   = [method_colors.get(m, '#888888') for m in methods]
-
-        x = np.arange(len(methods))
-        w = 0.36
-        bars_nk  = ax.bar(x - w / 2, nk_vals,  width=w, color=colors,
-                           alpha=0.88, linewidth=0.5, edgecolor='white')
-        bars_cd8 = ax.bar(x + w / 2, cd8_vals, width=w, color=colors,
-                           alpha=0.42, linewidth=0.5, edgecolor='white',
-                           hatch='//')
-
-        # value labels
-        for bar in list(bars_nk) + list(bars_cd8):
-            h = bar.get_height()
-            if h >= 0.4:
-                ax.text(bar.get_x() + bar.get_width() / 2, h + 0.3,
-                        f'{h:.1f}%', ha='center', va='bottom',
-                        fontsize=4.2, color='#333333')
-
-        # "Best" arrow on Cytoneighbor's NK bar if present
-        if 'Cytoneighbor' in methods:
-            ci = methods.index('Cytoneighbor')
-            best_h = nk_vals[ci]
-            ax.annotate('',
-                xy=(bars_nk[ci].get_x() + bars_nk[ci].get_width() / 2, best_h + 1.8),
-                xytext=(bars_nk[ci].get_x() + bars_nk[ci].get_width() / 2, best_h + 0.4),
-                arrowprops=dict(arrowstyle='->', color='#D55E00', lw=0.8))
-            ax.text(bars_nk[ci].get_x() + bars_nk[ci].get_width() / 2,
-                    best_h + 2.4, 'Best',
-                    ha='center', va='bottom',
-                    fontsize=4.5, color='#D55E00', fontweight='bold')
-
-        ax.set_xticks(x)
-        ax.set_xticklabels(methods, rotation=20, ha='right', fontsize=5.0)
-        ax.set_ylabel('Misclassification Rate (%)', fontsize=5.5)
-        ax.set_title('NKT Cell\nMisclassification', fontsize=6.5,
-                     fontweight='bold', pad=2)
-        ax.set_ylim(0, max(max(nk_vals + cd8_vals) * 1.35 + 3, 8))
-        ax.yaxis.set_major_locator(mticker.MultipleLocator(10))
-        ax.tick_params(labelsize=5)
-        ax.axhline(5, color='#AAAAAA', linestyle='--', linewidth=0.5, zorder=0)
-
-        patch_nk  = mpatches.Patch(facecolor='#888888', alpha=0.88,
-                                    label='NKT→NK')
-        patch_cd8 = mpatches.Patch(facecolor='#888888', alpha=0.42,
-                                    hatch='//', label='NKT→CD8')
-        ax.legend(handles=[patch_nk, patch_cd8],
-                  fontsize=4.8, frameon=False, loc='upper left',
-                  borderpad=0.2, handlelength=1.1)
-
-        ax.text(-0.18, 1.10, 'E', transform=ax.transAxes,
-                fontsize=9, fontweight='bold', va='bottom', color='black',
-                clip_on=False)
-
-    # ── Panel F helper ────────────────────────────────────────────────────────
-    def _draw_panel_F(
-        self,
-        ax,
-        per_class_f1: Dict[str, Dict[str, float]],
-        method_colors: Dict[str, str],
-        methods_ordered: List[str],
-    ) -> None:
-        """
-        Horizontal bar chart: F1 performance drop from easiest (CD4) to
-        hardest (NKT) cell type, illustrating robustness across methods.
-        Data computed live from metrics_results['per_class_f1'].
-        """
-        import matplotlib.ticker as mticker
-
-        methods = [m for m in methods_ordered if m in per_class_f1]
-        drops, colors = [], []
-        for m in methods:
-            cd4 = per_class_f1[m].get('CD4+ T cells', 0.0)
-            nkt = per_class_f1[m].get('NKT cells',    0.0)
-            drop = ((cd4 - nkt) / cd4 * 100) if cd4 > 0 else 0.0
-            drops.append(drop)
-            colors.append(method_colors.get(m, '#888888'))
-
-        y = np.arange(len(methods))
-        bars = ax.barh(y, drops, height=0.50,
-                       color=colors, alpha=0.85,
-                       linewidth=0.5, edgecolor='white')
-
-        for bar, v in zip(bars, drops):
-            ax.text(v + 0.6, bar.get_y() + bar.get_height() / 2,
-                    f'{v:.1f}%', va='center', ha='left',
-                    fontsize=4.8, color='#333333')
-
-        ax.set_yticks(y)
-        ax.set_yticklabels([])
-        # method labels on left side, colour-coded
-        for yi, (m, c) in enumerate(zip(methods, colors)):
-            fw = 'bold' if m == 'Cytoneighbor' else 'normal'
-            y_frac = (len(methods) - 1 - yi + 0.5) / len(methods)
-            ax.text(-0.04, y_frac, m,
-                    ha='right', va='center', fontsize=5.5,
-                    color=c, fontweight=fw,
-                    transform=ax.transAxes, clip_on=False)
-
-        # "Small drop = robust" annotation on Cytoneighbor bar
-        if 'Cytoneighbor' in methods:
-            ci = methods.index('Cytoneighbor')
-            ax.annotate('Small drop\n= robust',
-                        xy=(drops[ci] + 0.5, ci),
-                        xytext=(drops[ci] + 8, ci - 0.55),
-                        arrowprops=dict(arrowstyle='->', color='#D55E00', lw=0.8),
-                        fontsize=4.5, color='#D55E00', fontweight='bold',
-                        ha='center', va='bottom')
-
-        ax.invert_yaxis()
-        ax.set_xlabel('F1 Drop Easy → Hard (%)', fontsize=5.5)
-        ax.set_title('Robustness\n(F1 Performance Drop)', fontsize=6.5,
-                     fontweight='bold', pad=2)
-        xlim_max = max(max(drops) * 1.30 + 6, 20)
-        ax.set_xlim(0, xlim_max)
-        ax.xaxis.set_major_locator(mticker.MultipleLocator(10))
-        ax.tick_params(labelsize=5)
-
-        # subtle zone shading
-        ax.axvspan(0,  15,       alpha=0.04, color='green',  zorder=0)
-        ax.axvspan(15, 30,       alpha=0.04, color='yellow', zorder=0)
-        ax.axvspan(30, xlim_max, alpha=0.04, color='red',    zorder=0)
-
-        # dashed vertical at Harmony (if present, as outlier marker)
-        if 'Harmony' in methods:
-            hi = methods.index('Harmony')
-            ax.axvline(drops[hi], color='#AAAAAA', linestyle='--',
-                       linewidth=0.45, alpha=0.55, zorder=0)
-
-        ax.text(-0.18, 1.10, 'F', transform=ax.transAxes,
-                fontsize=9, fontweight='bold', va='bottom', color='black',
-                clip_on=False)
+        self._save_figure_pair(fig, 'f1_score_gradient')
 
     def generate_summary_report(self, metrics_results: Dict[str, Any]) -> None:
         """
@@ -1738,7 +1448,7 @@ class BenchmarkResolutionExperiment(BaseExperiment):
         self.generate_summary_report(metrics_results)
 
         # Save results
-        from src.utils import save_results
+        from cytoneighbor.utils import save_results
         results_path = os.path.join(self.output_dir, 'experiment_results.json')
         save_results(metrics_results['metrics'], results_path)
 

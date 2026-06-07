@@ -1,5 +1,5 @@
 """
-Experiment 3 — PT Anatomical Zonation and Convergent Dedifferentiation in DKD
+Experiment 3 鈥?PT Anatomical Zonation and Convergent Dedifferentiation in DKD
 Joint Manifold Architecture (Cytoneighbor)
 ================================================================================
 
@@ -7,48 +7,47 @@ Scientific Narrative
 --------------------
 Cytoneighbor's zero-shot joint manifold reveals that DKD proximal tubule (PT)
 pathology is not a simple linear dedifferentiation.  Instead, the healthy PT
-organises into two physiologically distinct segments — S1/S2 and S3 — that
+organises into two physiologically distinct segments 鈥?S1/S2 and S3 鈥?that
 retain their anatomical identity even within the joint embedding.  Under DKD
 injury both segments undergo parallel, progressive dedifferentiation, ultimately
 *converging* into a shared Injured PT terminal state characterised by severe
 extracellular-matrix remodelling.
 
 Cluster assignment (data-driven, no circular marker pre-selection):
-  • Functional PT (S1/S2-like) [root]  — highest absolute healthy-cell count,
+  鈥?Functional PT (S1/S2-like) [root]  鈥?highest absolute healthy-cell count,
                                          highest SLC5A2 / LRP2 expression
-  • Functional PT (S3-like)            — lower SLC5A2 consistent with S3 segment,
+  鈥?Functional PT (S3-like)            鈥?lower SLC5A2 consistent with S3 segment,
                                          highest healthy-cell purity (% Healthy)
-  • Injured PT                         — highest VCAM1 / HAVCR1, EMT signatures
+  鈥?Injured PT                         鈥?highest VCAM1 / HAVCR1, EMT signatures
 
 Topology (PAGA):
-  Triangular / convergent — S1/S2-like ↔ S3-like ↔ Injured PT — both healthy
+  Triangular / convergent 鈥?S1/S2-like 鈫?S3-like 鈫?Injured PT 鈥?both healthy
   segments share topological edges with the injury terminus, confirming parallel
   dedifferentiation rather than a single linear path.
 
 Zonation validation:
-  SLC5A1 (SGLT1) — expressed preferentially in S3 — is checked as an independent
+  SLC5A1 (SGLT1) 鈥?expressed preferentially in S3 鈥?is checked as an independent
   positive marker for the S3-like cluster.  Results are logged and plotted.
 
 Architecture:
   1.  Train SymRelEnc on ALL healthy cells (multi-type; required for contrastive)
   2.  Extract Healthy PT + Disease PT; tag disease_status
-  3.  ad.concat → combined_pt; run transform() once → joint SymRelEnc KNN graph
-  4.  Leiden → filter tiny clusters → dynamic resolution search
+  3.  ad.concat 鈫?combined_pt; run transform() once 鈫?joint SymRelEnc KNN graph
+  4.  Leiden 鈫?filter tiny clusters 鈫?dynamic resolution search
   5.  PAGA (convergent topology)
   6.  Root selection: absolute Healthy_Reference count (marker-free, no circularity)
   7.  Characterise clusters: S1/S2-like / S3-like / Injured PT
   8.  DPT from S1/S2-like root (acknowledged approximation for convergent manifold)
   9.  Zonation validation: SLC5A1 expression profile (independent positive marker)
   10. Compensatory hypothesis validation (disease-cell-specific SLC5A2 analysis)
-      ──────────────────────────────────────────────────────────────────────────
       Cluster-level mean expression differences can arise from three confounded
       mechanisms: (A) anatomical subtype composition, (B) genuine disease-driven
       upregulation, or (C) statistical noise.  To disentangle these, step 10
       computes SLC5A2 expression ONLY in Disease_Query cells within each cluster,
       then compares directly to Healthy_Reference cells in the same cluster.
-        • If DKD cells in S1/S2-like > healthy cells in S1/S2-like  → compensatory
+        鈥?If DKD cells in S1/S2-like > healthy cells in S1/S2-like  鈫?compensatory
           upregulation is supported at the cell level (Discussion material)
-        • If the difference disappears or reverses   → cluster-mean difference was
+        鈥?If the difference disappears or reverses   鈫?cluster-mean difference was
           driven by healthy-cell subtype composition (null hypothesis not rejected)
       Results are logged quantitatively and saved as compensatory_validation.pdf.
       Regardless of outcome, the primary zonation narrative (Results section) is
@@ -61,6 +60,7 @@ import gc
 import json
 import logging
 import os
+import shutil
 from typing import Any, Dict, List, Optional, Tuple
 
 import anndata as ad
@@ -73,10 +73,13 @@ from scipy import sparse
 from scipy.ndimage import gaussian_filter1d
 from scipy.stats import rankdata
 
-from src.trainer import CytoneighborWrapper
-from src.utils import ensure_output_dir
 
-# ── Optional dependency ────────────────────────────────────────────────────────
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from cytoneighbor.trainer import CytoneighborWrapper
+from cytoneighbor.utils import ensure_output_dir
 try:
     import gseapy as gp
     _GSEAPY_AVAILABLE = True
@@ -119,9 +122,9 @@ plt.rcParams.update({
 # ALL plotting methods that colour by biological_state must reference this dict.
 # ==============================================================================
 STATE_PALETTE: Dict[str, str] = {
-    "Functional PT (S1/S2-like)": "#1565C0",   # deep blue   — high-function baseline
-    "Functional PT (S3-like)":    "#2E7D32",   # deep green  — distal healthy segment
-    "Injured PT":                 "#B71C1C",   # deep red    — terminal injury state
+    "Functional PT (S1/S2-like)": "#1565C0",   # deep blue   鈥?high-function baseline
+    "Functional PT (S3-like)":    "#2E7D32",   # deep green  鈥?distal healthy segment
+    "Injured PT":                 "#B71C1C",   # deep red    鈥?terminal injury state
 }
 
 ORIGIN_PALETTE: Dict[str, str] = {
@@ -146,10 +149,6 @@ class DiseaseDiscoveryExperiment:
     publication-ready figures.
     """
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # Initialisation
-    # ──────────────────────────────────────────────────────────────────────────
-
     def __init__(self, config: Dict[str, Any]) -> None:
         self.config = config
         exp = config["experiments"]["disease_discovery"]
@@ -169,11 +168,11 @@ class DiseaseDiscoveryExperiment:
         self.n_top_genes       = exp.get("n_top_genes",       3000)
 
         # Biological marker panels
-        # adaptive_markers → epithelial functional markers (SLC5A2, LRP2)
-        # injury_markers   → stress / injury markers     (VCAM1, HAVCR1)
+        # adaptive_markers 鈫?epithelial functional markers (SLC5A2, LRP2)
+        # injury_markers   鈫?stress / injury markers     (VCAM1, HAVCR1)
         self.adaptive_markers   = exp.get("adaptive_markers",   ["SLC5A2", "LRP2"])
         self.injury_markers     = exp.get("injury_markers",     ["VCAM1", "HAVCR1"])
-        # S3 zonation validation marker — independent of adaptive/injury panels
+        # S3 zonation validation marker 鈥?independent of adaptive/injury panels
         self.zonation_marker    = exp.get("zonation_marker",    "SLC5A1")
 
         self.logger = logging.getLogger(__name__)
@@ -186,9 +185,6 @@ class DiseaseDiscoveryExperiment:
         self.logger.info(f"  Injury markers:   {self.injury_markers}")
         self.logger.info(f"  Zonation marker:  {self.zonation_marker}")
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # Data loading
-    # ──────────────────────────────────────────────────────────────────────────
 
     def load_and_preprocess_data(self) -> Tuple[Any, Any, Any]:
         """
@@ -197,9 +193,9 @@ class DiseaseDiscoveryExperiment:
         Steps
         -----
         1. Load h5ad, enforce float32 sparse representation.
-        2. Map Ensembl IDs → gene symbols via var['feature_name'].
+        2. Map Ensembl IDs 鈫?gene symbols via var['feature_name'].
         3. Pre-filter low-expression genes (memory optimisation).
-        4. Normalise, log1p, select HVGs — with double whitelist protection for
+        4. Normalise, log1p, select HVGs 鈥?with double whitelist protection for
            adaptive_markers, injury_markers, and zonation_marker.
         5. Split into reference (healthy) / query (disease) AnnData objects.
 
@@ -207,11 +203,11 @@ class DiseaseDiscoveryExperiment:
         -------
         full_data, reference_data, query_data
         """
-        self.logger.info("Loading and preprocessing DKD dataset …")
+        self.logger.info("Loading and preprocessing DKD dataset...")
         adata = sc.read_h5ad(self.dataset_path)
-        self.logger.info(f"Loaded: {adata.n_obs} cells × {adata.n_vars} genes")
+        self.logger.info(f"Loaded: {adata.n_obs} cells 脳 {adata.n_vars} genes")
 
-        # ── Sparse / precision enforcement ────────────────────────────────────
+        #  Sparse / precision enforcement
         # adata.X may be None (some h5ad store data only in layers) OR an all-
         # zero matrix (nnz == 0).  Both cases trigger the layers fallback before
         # we raise.  Only raise after exhausting all alternatives.
@@ -224,7 +220,7 @@ class DiseaseDiscoveryExperiment:
 
         if _needs_layer_fallback(adata.X):
             self.logger.warning(
-                "adata.X is None or empty — attempting layers fallback …"
+                "adata.X is None or empty; attempting layers fallback..."
             )
             for layer in ("counts", "normalized", "raw_counts", "spliced"):
                 if layer in adata.layers:
@@ -244,14 +240,14 @@ class DiseaseDiscoveryExperiment:
                     "Check dataset integrity."
                 )
         else:
-            # X is valid — normalise precision
+            # X is valid 鈥?normalise precision
             if not sparse.issparse(adata.X):
                 adata.X = sparse.csr_matrix(adata.X, dtype=np.float32)
             elif adata.X.dtype != np.float32:
                 adata.X = adata.X.astype(np.float32)
         gc.collect()
 
-        # ── Ensembl → symbol mapping ───────────────────────────────────────
+
         if "feature_name" in adata.var.columns:
             adata.var_names = adata.var["feature_name"].values
             adata.var_names_make_unique()
@@ -262,7 +258,7 @@ class DiseaseDiscoveryExperiment:
             self.adaptive_markers + self.injury_markers + [self.zonation_marker]
         ))
 
-        # ── Low-expression pre-filter ──────────────────────────────────────
+
         if sparse.issparse(adata.X):
             gene_nz = np.asarray((adata.X > 0).sum(axis=0)).flatten()
             gene_ct = np.asarray(adata.X.sum(axis=0)).flatten()
@@ -273,7 +269,7 @@ class DiseaseDiscoveryExperiment:
         min_cells = max(10, int(adata.n_obs * 0.001))
         gene_keep = (gene_nz >= min_cells) & (gene_ct >= 10)
 
-        # Whitelist pass 1 — markers survive low-expression filter
+        # Whitelist pass 1 鈥?markers survive low-expression filter
         marker_mask = adata.var_names.isin(all_markers)
         rescued = int(((~gene_keep) & marker_mask).sum())
         if rescued:
@@ -285,13 +281,13 @@ class DiseaseDiscoveryExperiment:
             gc.collect()
         self.logger.info(f"After pre-filter: {adata.n_vars} genes")
 
-        # ── Normalise + HVG ───────────────────────────────────────────────
+
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
         sc.pp.highly_variable_genes(adata, n_top_genes=self.n_top_genes)
         self.logger.info(f"HVG identified: {adata.var['highly_variable'].sum()}")
 
-        # Whitelist pass 2 — markers survive HVG filter
+        # Whitelist pass 2 鈥?markers survive HVG filter
         for m in all_markers:
             if m in adata.var_names and not adata.var.loc[m, "highly_variable"]:
                 adata.var.loc[m, "highly_variable"] = True
@@ -308,7 +304,6 @@ class DiseaseDiscoveryExperiment:
         else:
             self.logger.info(f"All markers present: {all_markers}")
 
-        # ── Train / query split ────────────────────────────────────────────
         ref_mask = adata.obs[self.condition_column] == self.healthy_condition
         qry_mask = adata.obs[self.condition_column] == self.disease_condition
         reference_data = adata[ref_mask].copy()
@@ -325,30 +320,254 @@ class DiseaseDiscoveryExperiment:
         )
         return full_data, reference_data, query_data
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # Model training
-    # ──────────────────────────────────────────────────────────────────────────
 
     def train_or_load_model(
         self, reference_data: Any, output_dir: str
     ) -> CytoneighborWrapper:
         """Train SymRelEnc on ALL healthy cells (multi-type required for
         contrastive negative pairs).  Saves model to *output_dir*."""
-        self.logger.info(
-            f"Training SymRelEnc on {reference_data.n_obs} healthy cells "
-            f"(all cell types) …"
-        )
         model = CytoneighborWrapper(self.config["model_params"])
         save_path = os.path.join(output_dir, "disease_discovery_model.zip")
-        model.train(
-            reference_data, self.cell_type_column,
-            synthesis_enabled=True, model_save_path=save_path,
-        )
+        if os.path.exists(save_path):
+            self.logger.info(
+                f"Loading existing SymRelEnc model from {save_path} "
+                "(figure/data export mode; training skipped)."
+            )
+            model.load_model(save_path)
+        else:
+            self.logger.info(
+                f"Training SymRelEnc on {reference_data.n_obs} healthy cells "
+                f"(all cell types)..."
+            )
+            model.train(
+                reference_data, self.cell_type_column,
+                synthesis_enabled=True, model_save_path=save_path,
+            )
         return model
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # Joint manifold construction
-    # ──────────────────────────────────────────────────────────────────────────
+    def _export_figure5_rebuild_data(
+        self,
+        pt_cells: Any,
+        characterization: Dict[str, Any],
+        output_dir: str,
+    ) -> Dict[str, str]:
+        """
+        Export a structured, figure-only data bundle for reproducible Figure 5
+        redrawing without rerunning the full disease-discovery pipeline.
+        """
+        export_dir = os.path.join(output_dir, "figure5_rebuild_data")
+        ensure_output_dir(export_dir)
+
+        # ---- Core cell object ----
+        h5ad_path = os.path.join(export_dir, "figure5_pt_cells.h5ad")
+        pt_cells_h5ad = pt_cells.copy()
+        if "cytoneighbor" in pt_cells_h5ad.uns:
+            cy_uns = copy.deepcopy(dict(pt_cells_h5ad.uns["cytoneighbor"]))
+            cy_uns.pop("model", None)
+            pt_cells_h5ad.uns["cytoneighbor"] = cy_uns
+        pt_cells_h5ad.write_h5ad(h5ad_path)
+        del pt_cells_h5ad
+
+        # ---- Long UMAP table ----
+        umap_df = pd.DataFrame(
+            pt_cells.obsm["X_umap"],
+            columns=["UMAP1", "UMAP2"],
+            index=pt_cells.obs_names.astype(str),
+        )
+        umap_df["cell_id"] = umap_df.index.astype(str)
+        for col in ["leiden_clusters", "biological_state", "disease_status", "dpt_pseudotime"]:
+            if col in pt_cells.obs.columns:
+                umap_df[col] = pt_cells.obs[col].astype(str if col != "dpt_pseudotime" else float)
+        umap_df.reset_index(drop=True).to_csv(
+            os.path.join(export_dir, "figure5_umap_long.csv"), index=False
+        )
+
+        # ---- Origin composition ----
+        count_df = (
+            pt_cells.obs
+            .groupby(["biological_state", "disease_status"])
+            .size()
+            .unstack(fill_value=0)
+        )
+        count_df = count_df.reindex([s for s in STATE_ORDER if s in count_df.index])
+        prop_df = count_df.div(count_df.sum(axis=1), axis=0) * 100.0
+        origin_rows = []
+        for state in count_df.index:
+            for origin in count_df.columns:
+                origin_rows.append({
+                    "biological_state": state,
+                    "origin": origin,
+                    "count": int(count_df.loc[state, origin]),
+                    "percent": float(prop_df.loc[state, origin]),
+                })
+        pd.DataFrame(origin_rows).to_csv(
+            os.path.join(export_dir, "figure5_origin_composition.csv"), index=False
+        )
+
+        # ---- Cluster characterization heatmap source ----
+        char_rows = []
+        labels = characterization["cluster_labels"]
+        for state in STATE_ORDER:
+            cluster_id = next((k for k, v in labels.items() if v == state), None)
+            if cluster_id is None:
+                continue
+            char_rows.append({
+                "cluster_id": str(cluster_id),
+                "biological_state": state,
+                "functional_score": float(characterization["functional_scores"][cluster_id]),
+                "injury_score": float(characterization["injury_scores"][cluster_id]),
+            })
+        pd.DataFrame(char_rows).to_csv(
+            os.path.join(export_dir, "figure5_cluster_characterization.csv"), index=False
+        )
+
+        # ---- PAGA edges ----
+        paga_conn = pt_cells.uns.get("paga", {}).get("connectivities")
+        edge_rows = []
+        if paga_conn is not None:
+            coo = paga_conn.tocoo()
+            seen = set()
+            for i, j, val in zip(coo.row, coo.col, coo.data):
+                if i == j:
+                    continue
+                key = tuple(sorted((int(i), int(j))))
+                if key in seen:
+                    continue
+                seen.add(key)
+                src = str(i)
+                dst = str(j)
+                edge_rows.append({
+                    "source_cluster": src,
+                    "target_cluster": dst,
+                    "source_state": labels.get(src, f"Cluster {src}"),
+                    "target_state": labels.get(dst, f"Cluster {dst}"),
+                    "weight": float(val),
+                })
+        pd.DataFrame(edge_rows).to_csv(
+            os.path.join(export_dir, "figure5_paga_edges.csv"), index=False
+        )
+
+        # ---- Marker trend exports ----
+        marker_order = ["SLC5A2", "LRP2", "VCAM1", "HAVCR1"]
+        available = [m for m in marker_order if m in pt_cells.var_names]
+        ptime = pt_cells.obs["dpt_pseudotime"].to_numpy()
+        finite = np.isfinite(ptime)
+        t_valid = ptime[finite]
+        t_ranked = rankdata(t_valid) / len(t_valid)
+        sort_idx = np.argsort(t_ranked)
+        t_sorted = t_ranked[sort_idx]
+
+        points_rows = []
+        smooth_rows = []
+        for marker in available:
+            raw = pt_cells[:, marker].X
+            expr = (raw.toarray().flatten() if hasattr(raw, "toarray")
+                    else np.asarray(raw).flatten())
+            e_valid = expr[finite]
+            e_sorted = e_valid[sort_idx].astype(float)
+            sigma = max(5, int(len(e_sorted) * 0.04))
+            smooth = gaussian_filter1d(e_sorted, sigma=sigma)
+
+            for x, y in zip(t_sorted, e_sorted):
+                points_rows.append({
+                    "marker": marker,
+                    "t_ranked": float(x),
+                    "expression": float(y),
+                })
+            for x, y in zip(t_sorted, smooth):
+                smooth_rows.append({
+                    "marker": marker,
+                    "t_ranked": float(x),
+                    "smooth_expression": float(y),
+                })
+
+        pd.DataFrame(points_rows).to_csv(
+            os.path.join(export_dir, "figure5_marker_points_long.csv"), index=False
+        )
+        pd.DataFrame(smooth_rows).to_csv(
+            os.path.join(export_dir, "figure5_marker_smooth_long.csv"), index=False
+        )
+
+        boundary_rows = []
+        if "biological_state" in pt_cells.obs.columns:
+            st_valid = pt_cells.obs["biological_state"].to_numpy()[finite]
+            st_sorted = st_valid[sort_idx]
+            for state in STATE_ORDER:
+                mask = st_sorted == state
+                if mask.sum() > 0:
+                    boundary_rows.append({
+                        "biological_state": state,
+                        "median_t_ranked": float(np.median(t_sorted[mask])),
+                    })
+        pd.DataFrame(boundary_rows).to_csv(
+            os.path.join(export_dir, "figure5_dpt_state_boundaries.csv"), index=False
+        )
+
+        # ---- Validation summaries (reuse original logic, write side products here) ----
+        validation_dir = os.path.join(export_dir, "_validation_panels")
+        ensure_output_dir(validation_dir)
+        zonation = self._validate_zonation(pt_cells, characterization, validation_dir)
+        compensatory = self._validate_compensatory_hypothesis(pt_cells, characterization, validation_dir)
+
+        zon_rows = []
+        for row in zonation.get("per_cluster", {}).values():
+            zon_rows.append({
+                "cluster_id": str(row.get("cluster_id")),
+                "biological_state": row.get("label"),
+                self.zonation_marker: row.get(self.zonation_marker),
+                self.adaptive_markers[0]: row.get(self.adaptive_markers[0]),
+            })
+        pd.DataFrame(zon_rows).to_csv(
+            os.path.join(export_dir, "figure5_zonation_validation.csv"), index=False
+        )
+
+        comp_rows = []
+        for row in compensatory.get("per_cluster", {}).values():
+            comp_rows.append({
+                "cluster_id": str(row.get("cluster_id")),
+                "biological_state": row.get("label"),
+                "healthy_mean": row.get("healthy_mean"),
+                "disease_mean": row.get("disease_mean"),
+                "delta": row.get("delta"),
+                "pvalue": row.get("pvalue"),
+                "n_healthy": row.get("n_healthy"),
+                "n_disease": row.get("n_disease"),
+            })
+        pd.DataFrame(comp_rows).to_csv(
+            os.path.join(export_dir, "figure5_compensatory_validation.csv"), index=False
+        )
+
+        # ---- GO enrichment table, if present ----
+        go_csv_name = "go_enrichment_bubble.csv"
+        go_csv_src = os.path.join(output_dir, go_csv_name)
+        if os.path.exists(go_csv_src):
+            shutil.copy2(go_csv_src, os.path.join(export_dir, go_csv_name))
+
+        manifest = {
+            "export_dir": export_dir,
+            "pt_cells_h5ad": "figure5_pt_cells.h5ad",
+            "tables": [
+                "figure5_umap_long.csv",
+                "figure5_origin_composition.csv",
+                "figure5_cluster_characterization.csv",
+                "figure5_paga_edges.csv",
+                "figure5_marker_points_long.csv",
+                "figure5_marker_smooth_long.csv",
+                "figure5_dpt_state_boundaries.csv",
+                "figure5_zonation_validation.csv",
+                "figure5_compensatory_validation.csv",
+                "go_enrichment_bubble.csv",
+            ],
+            "source_panels_retained": [
+                os.path.join(output_dir, "go_enrichment_bubble.pdf"),
+            ],
+        }
+        with open(os.path.join(export_dir, "manifest.json"), "w", encoding="utf-8") as f:
+            json.dump(manifest, f, indent=2, ensure_ascii=False)
+
+        self.logger.info(f"Figure5 rebuild data exported: {export_dir}")
+        return manifest
+
 
     def construct_reference_mapping(
         self, model: CytoneighborWrapper, combined_pt: Any
@@ -360,8 +579,8 @@ class DiseaseDiscoveryExperiment:
         ------
         SymRelEnc was trained on all healthy cell types, encoding biological
         similarity under the healthy reference tissue metric.  Running
-        transform() on combined_pt — which physically contains BOTH healthy and
-        disease PT cells — allows disease cells to find healthy cells as
+        transform() on combined_pt 鈥?which physically contains BOTH healthy and
+        disease PT cells 鈥?allows disease cells to find healthy cells as
         K-nearest neighbours.  Healthy cells thus become true topological
         anchors, not a scoring background.
 
@@ -370,15 +589,14 @@ class DiseaseDiscoveryExperiment:
         model       : trained CytoneighborWrapper
         combined_pt : ad.concat([healthy_PT, disease_PT]) with disease_status tagged
         """
-        from src.model import transform as _transform
+        from cytoneighbor.model import transform as _transform
 
         self.logger.info(
             f"Building SymRelEnc joint graph: {combined_pt.n_obs} PT cells "
             f"({(combined_pt.obs['disease_status']=='Healthy_Reference').sum()} healthy, "
-            f"{(combined_pt.obs['disease_status']=='Disease_Query').sum()} disease) …"
+            f"{(combined_pt.obs['disease_status']=='Disease_Query').sum()} disease)."
         )
 
-        # ── Guard: trained model ───────────────────────────────────────────
         if not model.is_trained:
             raise RuntimeError("Model is not trained.")
         cy = model.adata.uns.get("cytoneighbor", {})
@@ -387,8 +605,8 @@ class DiseaseDiscoveryExperiment:
         if cy.get("ann", {}).get("P_ann") is None:
             raise RuntimeError("P_ann projection matrix missing from uns['cytoneighbor'].")
 
-        # ── Deep-copy context injection (prevents transform() from mutating
-        #    self.adata via model.to(device) → in-place ops) ─────────────
+        #  Deep-copy context injection (prevents transform() from mutating
+        #    self.adata via model.to(device) 鈫?in-place ops) 
         combined_copy = combined_pt.copy()
         combined_copy.uns["cytoneighbor"] = copy.deepcopy({
             "model":         cy["model"],
@@ -399,7 +617,7 @@ class DiseaseDiscoveryExperiment:
             "env_key":       cy.get("env_key"),
         })
 
-        # ── Build joint KNN graph ──────────────────────────────────────────
+
         _transform(combined_copy, n_neighbors=self.n_neighbors, use_cuda=True)
 
         if "connectivities" not in combined_copy.obsp:
@@ -413,9 +631,6 @@ class DiseaseDiscoveryExperiment:
         )
         return combined_copy
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # Trajectory discovery on joint manifold
-    # ──────────────────────────────────────────────────────────────────────────
 
     def discover_adaptive_trajectory(
         self, combined_pt: Any
@@ -431,7 +646,7 @@ class DiseaseDiscoveryExperiment:
         3. Dynamic resolution search if < 3 clusters are found.
         4. PAGA for cluster connectivity (convergent topology detection).
         5. Root selection: cluster with highest *absolute* Healthy_Reference
-           count — marker-free, no circular logic.
+           count 鈥?marker-free, no circular logic.
         6. Biological characterisation anchored to root.
         7. DPT from root centroid (acknowledged approximation for convergent
            manifold; PAGA provides the topologically accurate picture).
@@ -440,22 +655,21 @@ class DiseaseDiscoveryExperiment:
             f"Trajectory discovery on joint manifold "
             f"({combined_pt.n_obs} PT cells, "
             f"{(combined_pt.obs['disease_status']=='Healthy_Reference').sum()} healthy + "
-            f"{(combined_pt.obs['disease_status']=='Disease_Query').sum()} disease) …"
+            f"{(combined_pt.obs['disease_status']=='Disease_Query').sum()} disease)."
         )
         pt_cells = combined_pt.copy()
 
-        # ── 1. Leiden ─────────────────────────────────────────────────────
+  
         sc.tl.leiden(
             pt_cells, resolution=self.leiden_resolution,
             key_added="leiden_clusters",
         )
         n_init = len(pt_cells.obs["leiden_clusters"].unique())
         self.logger.info(
-            f"Initial Leiden ({self.leiden_resolution}): {n_init} clusters — "
+            f"Initial Leiden ({self.leiden_resolution}): {n_init} clusters 鈥?"
             f"{dict(pt_cells.obs['leiden_clusters'].value_counts())}"
         )
 
-        # ── 2. Filter tiny clusters ────────────────────────────────────────
         def _drop_tiny(adata: Any, thresh: int) -> Any:
             sizes  = adata.obs["leiden_clusters"].value_counts()
             valid  = sizes[sizes >= thresh].index.tolist()
@@ -474,12 +688,11 @@ class DiseaseDiscoveryExperiment:
         n_clusters = len(pt_cells.obs["leiden_clusters"].unique())
         cluster_counts = pt_cells.obs["leiden_clusters"].value_counts()
 
-        # ── 3. Dynamic resolution search ──────────────────────────────────
         res = self.leiden_resolution
         while n_clusters < 3 and res <= 3.0:
             res = round(res + 0.2, 2)
             self.logger.warning(
-                f"Only {n_clusters} clusters — retrying with resolution={res}"
+                f"Only {n_clusters} clusters 鈥?retrying with resolution={res}"
             )
             sc.tl.leiden(pt_cells, resolution=res, key_added="leiden_clusters")
             thresh = max(10, int(pt_cells.n_obs * 0.01))
@@ -494,18 +707,18 @@ class DiseaseDiscoveryExperiment:
         root_cluster = str(cluster_counts.idxmax())
 
         if n_clusters > 1:
-            # ── 4. PAGA ───────────────────────────────────────────────────
-            self.logger.info("Running PAGA for cluster connectivity …")
+  
+            self.logger.info("Running PAGA for cluster connectivity...")
             sc.tl.paga(pt_cells, groups="leiden_clusters")
             self._log_paga_topology(pt_cells)
 
-            # ── 5. Root selection (absolute healthy count; no marker bias) ─
+   
             root_cluster = self._select_root_cluster(pt_cells)
 
-            # ── 6. Characterisation ────────────────────────────────────────
+    
             characterization = self._characterize_clusters(pt_cells, root_cluster)
 
-            # ── 7. DPT from root centroid ──────────────────────────────────
+        
             root_mask = pt_cells.obs["leiden_clusters"] == root_cluster
             if root_mask.sum() > 0:
                 root_idx = np.where(root_mask)[0]
@@ -520,7 +733,7 @@ class DiseaseDiscoveryExperiment:
                     f"DPT iroot={pt_cells.uns['iroot']} "
                     f"(centroid-nearest cell in cluster '{root_cluster}')"
                 )
-                self.logger.info("Computing diffusion map + DPT …")
+                self.logger.info("Computing diffusion map + DPT...")
                 sc.tl.diffmap(pt_cells)
                 sc.tl.dpt(pt_cells)
                 self.logger.info(
@@ -529,10 +742,10 @@ class DiseaseDiscoveryExperiment:
                 )
             else:
                 self.logger.warning(
-                    f"Root cluster '{root_cluster}' empty after filtering — DPT skipped."
+                    f"Root cluster '{root_cluster}' empty after filtering 鈥?DPT skipped."
                 )
         else:
-            self.logger.warning("< 2 clusters — PAGA and DPT skipped.")
+            self.logger.warning("< 2 clusters 鈥?PAGA and DPT skipped.")
             characterization = self._characterize_clusters(pt_cells, root_cluster)
 
         return {
@@ -543,10 +756,7 @@ class DiseaseDiscoveryExperiment:
             "characterization": characterization,
         }
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # Root cluster selection
-    # ──────────────────────────────────────────────────────────────────────────
-
+ 
     def _select_root_cluster(self, pt_cells: Any) -> str:
         """
         Select the trajectory root as the cluster with the highest *absolute*
@@ -554,10 +764,10 @@ class DiseaseDiscoveryExperiment:
 
         Rationale (documented for reviewers)
         -------------------------------------
-        The S1/S2 segment constitutes approximately 60–70 % of PT tubular
-        volume and cell count in the human kidney (Lindström et al., 2021).
+        The S1/S2 segment constitutes approximately 60鈥?0 % of PT tubular
+        volume and cell count in the human kidney (Lindstr枚m et al., 2021).
         Therefore, in a joint healthy+disease PT dataset where healthy cells
-        are the majority (≈77 %), the S1/S2 cluster will contain the largest
+        are the majority (鈮?7 %), the S1/S2 cluster will contain the largest
         absolute number of healthy cells simply because it is the numerically
         dominant PT compartment.  Using absolute count avoids any use of
         expression markers in root selection, fully eliminating circular logic
@@ -568,14 +778,14 @@ class DiseaseDiscoveryExperiment:
 
         Fallback
         --------
-        If disease_status is absent → largest cluster by total cell count.
+        If disease_status is absent 鈫?largest cluster by total cell count.
         """
-        self.logger.info("Selecting root cluster by Healthy_Reference absolute count …")
+        self.logger.info("Selecting root cluster by Healthy_Reference absolute count...")
 
         if "disease_status" not in pt_cells.obs.columns:
             fallback = str(pt_cells.obs["leiden_clusters"].value_counts().idxmax())
             self.logger.warning(
-                f"'disease_status' absent — fallback to largest cluster '{fallback}'"
+                f"'disease_status' absent 鈥?fallback to largest cluster '{fallback}'"
             )
             return fallback
 
@@ -583,7 +793,7 @@ class DiseaseDiscoveryExperiment:
         if healthy.n_obs == 0:
             fallback = str(pt_cells.obs["leiden_clusters"].value_counts().idxmax())
             self.logger.warning(
-                f"No Healthy_Reference cells — fallback to largest cluster '{fallback}'"
+                f"No Healthy_Reference cells 鈥?fallback to largest cluster '{fallback}'"
             )
             return fallback
 
@@ -604,15 +814,12 @@ class DiseaseDiscoveryExperiment:
                 f"purity={purity:5.1f}%"
             )
         self.logger.info(
-            f"Selected root → Cluster '{root}' "
+            f"Selected root 鈫?Cluster '{root}' "
             f"({h_dist[root]} healthy cells, largest absolute count)"
         )
         return root
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # Cluster characterisation
-    # ──────────────────────────────────────────────────────────────────────────
-
+   
     def _characterize_clusters(
         self, pt_cells: Any, root_cluster: str
     ) -> Dict[str, Any]:
@@ -621,12 +828,12 @@ class DiseaseDiscoveryExperiment:
 
         Assignment logic (no circular dependence on root selection)
         -----------------------------------------------------------
-        1. root_cluster              → "Functional PT (S1/S2-like)"
+        1. root_cluster              鈫?"Functional PT (S1/S2-like)"
            Rationale: root was selected by absolute healthy count, not markers;
            this cluster also carries the highest SLC5A2 / LRP2 (confirmed post-hoc).
-        2. Highest VCAM1 / HAVCR1    → "Injured PT"
+        2. Highest VCAM1 / HAVCR1    鈫?"Injured PT"
            The terminal dedifferentiation state, characterised by EMT signatures.
-        3. Remaining cluster(s)      → "Functional PT (S3-like)"
+        3. Remaining cluster(s)      鈫?"Functional PT (S3-like)"
            Lower SLC5A2 consistent with S3 segment biology; characterised
            post-hoc via _validate_zonation (SLC5A1 check).
 
@@ -634,8 +841,8 @@ class DiseaseDiscoveryExperiment:
         (VCAM1/HAVCR1 mean) for every cluster in the returned dict.
         """
         self.logger.info(
-            f"Characterising clusters: root='{root_cluster}' → "
-            "'Functional PT (S1/S2-like)' …"
+            f"Characterising clusters: root='{root_cluster}' 鈫?"
+            "'Functional PT (S1/S2-like)'."
         )
 
         char: Dict[str, Any] = {
@@ -660,25 +867,25 @@ class DiseaseDiscoveryExperiment:
 
         df = pd.DataFrame(stats_rows)
 
-        # 1. Root → S1/S2-like
+        # 1. Root 鈫?S1/S2-like
         char["cluster_labels"][root_cluster] = "Functional PT (S1/S2-like)"
         remaining = df[df["cluster"] != root_cluster].copy()
 
-        # 2. Highest injury → Injured PT
+        # 2. Highest injury 鈫?Injured PT
         if not remaining.empty:
             inj_id = remaining.sort_values("injury", ascending=False).iloc[0]["cluster"]
             char["cluster_labels"][inj_id] = "Injured PT"
             remaining = remaining[remaining["cluster"] != inj_id]
 
-        # 3. All intermediate clusters → S3-like
+        # 3. All intermediate clusters 鈫?S3-like
         for _, row in remaining.iterrows():
             char["cluster_labels"][row["cluster"]] = "Functional PT (S3-like)"
 
-        # ── Post-hoc validation logging ────────────────────────────────────
+        #  Post-hoc validation logging 
         self.logger.info("=== Cluster characterisation results ===")
         for c, label in char["cluster_labels"].items():
             self.logger.info(
-                f"  Cluster {c} → {label}  "
+                f"  Cluster {c} 鈫?{label}  "
                 f"(Functional={char['functional_scores'][c]:.4f}, "
                 f"Injury={char['injury_scores'][c]:.4f})"
             )
@@ -691,20 +898,20 @@ class DiseaseDiscoveryExperiment:
             s3 = char["functional_scores"].get(s3id, 0.0)
             if s12 > s3:
                 self.logger.info(
-                    f"  ✓ S1/S2-like SLC5A2/LRP2 ({s12:.3f}) > "
-                    f"S3-like ({s3:.3f}) — consistent with zonation"
+                    f"  鉁?S1/S2-like SLC5A2/LRP2 ({s12:.3f}) > "
+                    f"S3-like ({s3:.3f}) 鈥?consistent with zonation"
                 )
             else:
                 self.logger.warning(
-                    f"  ⚠ S1/S2-like functional score ({s12:.3f}) is NOT higher "
-                    f"than S3-like ({s3:.3f}) — zonation interpretation requires caution"
+                    f"  鈿?S1/S2-like functional score ({s12:.3f}) is NOT higher "
+                    f"than S3-like ({s3:.3f}) 鈥?zonation interpretation requires caution"
                 )
 
         return char
 
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
     # PAGA topology logging
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
 
     def _log_paga_topology(self, pt_cells: Any) -> None:
         """
@@ -720,14 +927,14 @@ class DiseaseDiscoveryExperiment:
                 conn = conn.toarray()
             n = conn.shape[0]
             self.logger.info(
-                f"PAGA connectivity matrix ({n}×{n}, threshold={self.paga_threshold}):"
+                f"PAGA connectivity matrix ({n}脳{n}, threshold={self.paga_threshold}):"
             )
             edges = []
             for i in range(n):
                 for j in range(i + 1, n):
                     w = float(conn[i, j])
                     if w >= self.paga_threshold:
-                        edges.append(f"{i}↔{j} (w={w:.3f})")
+                        edges.append(f"{i}<->{j} (w={w:.3f})")
             self.logger.info(
                 f"  Edges above threshold: {', '.join(edges) if edges else 'none'}"
             )
@@ -735,23 +942,23 @@ class DiseaseDiscoveryExperiment:
             max_possible = n * (n - 1) // 2
             if n == 3 and n_edges == 3:
                 self.logger.info(
-                    "  → FULLY CONNECTED TRIANGLE: consistent with convergent "
+                    "  鈫?FULLY CONNECTED TRIANGLE: consistent with convergent "
                     "dedifferentiation (both S1/S2 and S3 edges reach Injured PT)"
                 )
             elif n_edges == n - 1:
                 self.logger.info(
-                    "  → LINEAR CHAIN: single-path trajectory topology"
+                    "  鈫?LINEAR CHAIN: single-path trajectory topology"
                 )
             else:
                 self.logger.info(
-                    f"  → {n_edges}/{max_possible} edges present — partial connectivity"
+                    f"  鈫?{n_edges}/{max_possible} edges present 鈥?partial connectivity"
                 )
         except Exception as e:
             self.logger.warning(f"PAGA topology logging failed (non-fatal): {e}")
 
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
     # Zonation validation
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
 
     def _validate_zonation(
         self,
@@ -771,9 +978,9 @@ class DiseaseDiscoveryExperiment:
 
         Additional checks
         -----------------
-        • SLC5A2 (SGLT2) gradient:  S1/S2 > S3 > Injured (expected from anatomy)
-        • Quantitative statistics logged for Methods section
-        • Bar plot saved as zonation_validation.pdf
+        鈥?SLC5A2 (SGLT2) gradient:  S1/S2 > S3 > Injured (expected from anatomy)
+        鈥?Quantitative statistics logged for Methods section
+        鈥?Bar plot saved as zonation_validation.pdf
 
         Returns
         -------
@@ -800,12 +1007,12 @@ class DiseaseDiscoveryExperiment:
 
         if not present:
             self.logger.warning(
-                f"None of {val_genes} found in var_names — "
+                f"None of {val_genes} found in var_names 鈥?"
                 "zonation validation skipped."
             )
             return results
 
-        # ── Per-cluster mean expression ───────────────────────────────────
+        #  Per-cluster mean expression 
         cluster_order_ids = [s12_id, s3_id, inj_id]
         cluster_order_ids = [c for c in cluster_order_ids if c is not None]
 
@@ -823,10 +1030,10 @@ class DiseaseDiscoveryExperiment:
             results["per_cluster"][c] = row
 
         df = pd.DataFrame(rows).set_index("label")
-        self.logger.info("\n=== Zonation validation — per-cluster means ===")
+        self.logger.info("\n=== Zonation validation 鈥?per-cluster means ===")
         self.logger.info(f"\n{df[[g for g in val_genes if g in df.columns]].round(4).to_string()}")
 
-        # ── S3 enrichment assessment ──────────────────────────────────────
+        #  S3 enrichment assessment 
         zm = self.zonation_marker
         if zm in df.columns and s3_id is not None and s12_id is not None:
             results["zonation_marker_present"] = True
@@ -836,26 +1043,26 @@ class DiseaseDiscoveryExperiment:
             results["s3_enrichment_confirmed"] = confirmed
             if confirmed:
                 self.logger.info(
-                    f"  ✓ {zm} higher in S3-like ({s3_val:.4f}) "
-                    f"than S1/S2-like ({s12_val:.4f}) — "
+                    f"  鉁?{zm} higher in S3-like ({s3_val:.4f}) "
+                    f"than S1/S2-like ({s12_val:.4f}) 鈥?"
                     "ZONATION HYPOTHESIS SUPPORTED"
                 )
             else:
                 self.logger.warning(
-                    f"  ✗ {zm} NOT higher in S3-like ({s3_val:.4f}) "
-                    f"vs S1/S2-like ({s12_val:.4f}) — "
+                    f"  鉁?{zm} NOT higher in S3-like ({s3_val:.4f}) "
+                    f"vs S1/S2-like ({s12_val:.4f}) 鈥?"
                     "zonation interpretation requires additional evidence; "
                     f"cluster difference may reflect cell-to-cell variability. "
                     "Report as 'consistent with' rather than 'confirmed'."
                 )
         else:
             self.logger.warning(
-                f"  {zm} not in var_names — "
+                f"  {zm} not in var_names 鈥?"
                 "S3 marker validation unavailable; "
                 "zonation claim must rely on SLC5A2 gradient alone."
             )
 
-        # ── Zonation validation figure ────────────────────────────────────
+        #  Zonation validation figure 
         plot_genes = [g for g in val_genes if g in df.columns]
         if plot_genes and len(df) > 0:
             try:
@@ -883,7 +1090,7 @@ class DiseaseDiscoveryExperiment:
                     ax.set_ylabel("Mean expression (log1p)", fontsize=9)
                     ax.set_title(
                         f"{gene} expression\n"
-                        f"({'S3 marker — should be highest in S3-like' if gene == zm else 'S1/S2 marker — should decrease toward Injured PT'})",
+                        f"({'S3 marker 鈥?should be highest in S3-like' if gene == zm else 'S1/S2 marker 鈥?should decrease toward Injured PT'})",
                         fontsize=8, fontweight="bold",
                     )
                     ax.grid(axis="y", linestyle="--", alpha=0.4)
@@ -915,9 +1122,9 @@ class DiseaseDiscoveryExperiment:
 
         return results
 
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
     # Main visualisation orchestrator
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
 
     def create_visualizations(
         self, results: Dict[str, Any], output_dir: str
@@ -927,16 +1134,16 @@ class DiseaseDiscoveryExperiment:
 
         Figures produced
         ----------------
-        umap_combined.pdf               — 4-panel UMAP with explicit palette
-        paga_trajectory.pdf             — PAGA cluster connectivity
-        marker_trends.pdf               — Marker dynamics along DPT
-        cluster_characterization.pdf    — Functional vs Injury score heatmap
-        origin_composition_barplot.pdf  — Quantitative cell-origin composition
-        zonation_validation.pdf         — SLC5A1 / SLC5A2 zonation check
-        compensatory_validation.pdf     — Disease-cell-specific SLC5A2 analysis
-        go_enrichment_bubble.pdf        — GO enrichment (strict filtering)
+        umap_combined.pdf               鈥?4-panel UMAP with explicit palette
+        paga_trajectory.pdf             鈥?PAGA cluster connectivity
+        marker_trends.pdf               鈥?Marker dynamics along DPT
+        cluster_characterization.pdf    鈥?Functional vs Injury score heatmap
+        origin_composition_barplot.pdf  鈥?Quantitative cell-origin composition
+        zonation_validation.pdf         鈥?SLC5A1 / SLC5A2 zonation check
+        compensatory_validation.pdf     鈥?Disease-cell-specific SLC5A2 analysis
+        go_enrichment_bubble.pdf        鈥?GO enrichment (strict filtering)
         """
-        self.logger.info("Creating visualisations …")
+        self.logger.info("Creating visualisations...")
         pt_cells         = results["pt_cells"]
         characterization = results["characterization"]
 
@@ -962,9 +1169,9 @@ class DiseaseDiscoveryExperiment:
         self._validate_compensatory_hypothesis(pt_cells, characterization, output_dir)
         self._plot_go_enrichment(pt_cells, characterization, output_dir)
 
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
     # Compensatory hypothesis validation
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
 
     def _validate_compensatory_hypothesis(
         self,
@@ -982,14 +1189,14 @@ class DiseaseDiscoveryExperiment:
         from three independent mechanisms that are confounded in whole-cluster
         means:
 
-          (A) Anatomical subtype composition — the cluster labelled S1/S2-like
+          (A) Anatomical subtype composition 鈥?the cluster labelled S1/S2-like
               may contain a higher fraction of true S1/S2 cells, which
               constitutively express more SLC5A2 regardless of disease status.
-          (B) Genuine disease-driven upregulation — DKD cells in the S1/S2-like
+          (B) Genuine disease-driven upregulation 鈥?DKD cells in the S1/S2-like
               cluster actively upregulate SLC5A2 as a compensatory response to
               reduced single-nephron GFR (as hypothesised by the SGLT2 inhibitor
               rationale literature).
-          (C) Statistical noise — the 8% mean difference may fall within normal
+          (C) Statistical noise 鈥?the 8% mean difference may fall within normal
               cell-to-cell variability.
 
         This method disentangles A from B by isolating only the Disease_Query
@@ -999,19 +1206,19 @@ class DiseaseDiscoveryExperiment:
         Test logic
         ----------
         For the S1/S2-like cluster (the key cluster for the compensatory claim):
-          H0: mean_SLC5A2(Disease) ≤ mean_SLC5A2(Healthy) within the cluster
-          H1: mean_SLC5A2(Disease) >  mean_SLC5A2(Healthy)  → compensatory signal
+          H0: mean_SLC5A2(Disease) 鈮?mean_SLC5A2(Healthy) within the cluster
+          H1: mean_SLC5A2(Disease) >  mean_SLC5A2(Healthy)  鈫?compensatory signal
 
         A one-sided Mann-Whitney U test is used (non-parametric; robust to the
         non-normal distribution of single-cell expression values).
 
         Reporting policy
         ----------------
-        • If H1 is supported (p < 0.05, disease mean > healthy mean):
+        鈥?If H1 is supported (p < 0.05, disease mean > healthy mean):
           The compensatory finding is logged as SUPPORTED and reported in
           Discussion as corroborating evidence for the SGLT2 inhibitor mechanism.
           The primary zonation narrative (Results) is NOT changed.
-        • If H1 is not supported:
+        鈥?If H1 is not supported:
           The null hypothesis is logged as NOT REJECTED.  The cluster-mean
           difference is attributed to subtype composition (mechanism A), which
           is consistent with the zonation interpretation.
@@ -1019,7 +1226,7 @@ class DiseaseDiscoveryExperiment:
 
         Output
         ------
-        compensatory_validation.pdf  — per-cluster disease vs healthy SLC5A2
+        compensatory_validation.pdf  鈥?per-cluster disease vs healthy SLC5A2
                                        side-by-side bar plot with significance
                                        annotation and sample sizes
         Returns dict with per-cluster statistics for JSON results.
@@ -1036,18 +1243,18 @@ class DiseaseDiscoveryExperiment:
             "per_cluster":               {},
         }
 
-        # ── Prerequisite checks ───────────────────────────────────────────
+        #  Prerequisite checks 
         target_gene = self.adaptive_markers[0]   # SLC5A2 by default
         for col in ("disease_status", "leiden_clusters", "biological_state"):
             if col not in pt_cells.obs.columns:
                 self.logger.warning(
-                    f"  '{col}' absent from obs — compensatory validation skipped."
+                    f"  '{col}' absent from obs 鈥?compensatory validation skipped."
                 )
                 return result
 
         if target_gene not in pt_cells.var_names:
             self.logger.warning(
-                f"  '{target_gene}' not in var_names — "
+                f"  '{target_gene}' not in var_names 鈥?"
                 "compensatory validation skipped."
             )
             return result
@@ -1056,7 +1263,7 @@ class DiseaseDiscoveryExperiment:
 
         labels = characterization["cluster_labels"]
 
-        # ── Per-cluster disease vs healthy comparison ─────────────────────
+        #  Per-cluster disease vs healthy comparison 
         plot_rows = []
         for cluster_id, label in labels.items():
             h_mask = (
@@ -1076,7 +1283,7 @@ class DiseaseDiscoveryExperiment:
             if n_h < 5 or n_d < 5:
                 self.logger.warning(
                     f"  Cluster {cluster_id} ({label}): "
-                    f"too few cells (healthy={n_h}, disease={n_d}) — skipping."
+                    f"too few cells (healthy={n_h}, disease={n_d}) 鈥?skipping."
                 )
                 continue
 
@@ -1115,13 +1322,13 @@ class DiseaseDiscoveryExperiment:
             plot_rows.append(row)
             result["per_cluster"][cluster_id] = row
 
-            sig = "p<0.05 ✓" if (not np.isnan(pval) and pval < 0.05) else "n.s."
-            direction = "↑ disease > healthy" if d_mean > h_mean else "↓ disease < healthy"
+            sig = "p<0.05" if (not np.isnan(pval) and pval < 0.05) else "n.s."
+            direction = "鈫?disease > healthy" if d_mean > h_mean else "鈫?disease < healthy"
             self.logger.info(
                 f"  Cluster {cluster_id} ({label:35s}): "
                 f"healthy={h_mean:.4f} (n={n_h})  "
                 f"disease={d_mean:.4f} (n={n_d})  "
-                f"Δ={d_mean-h_mean:+.4f}  {direction}  {sig}"
+                f"螖={d_mean-h_mean:+.4f}  {direction}  {sig}"
             )
 
             # Store S1/S2-like specific results for top-level reporting
@@ -1132,7 +1339,7 @@ class DiseaseDiscoveryExperiment:
                 result["s12_n_healthy"]    = n_h
                 result["s12_n_disease"]    = n_d
 
-        # ── Verdict on compensatory hypothesis ────────────────────────────
+        #  Verdict on compensatory hypothesis 
         s12_pval  = result.get("s12_pvalue")
         s12_delta = (result["s12_disease_mean"] or 0.0) - (result["s12_healthy_mean"] or 0.0)
 
@@ -1141,30 +1348,30 @@ class DiseaseDiscoveryExperiment:
             result["compensatory_supported"] = supported
             if supported:
                 self.logger.info(
-                    f"\n  ╔══════════════════════════════════════════════════════╗\n"
-                    f"  ║  COMPENSATORY HYPOTHESIS SUPPORTED                    ║\n"
-                    f"  ║  DKD cells in S1/S2-like show higher {target_gene}         ║\n"
-                    f"  ║  than healthy cells in the same cluster               ║\n"
-                    f"  ║  Δ={s12_delta:+.4f}  p={s12_pval:.4f}                       ║\n"
-                    f"  ║  → Suitable for Discussion (not Results)              ║\n"
-                    f"  ╚══════════════════════════════════════════════════════╝"
+                    f"\n  鈺斺晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晽\n"
+                    f"  鈺? COMPENSATORY HYPOTHESIS SUPPORTED                    鈺慭n"
+                    f"  鈺? DKD cells in S1/S2-like show higher {target_gene}         鈺慭n"
+                    f"  鈺? than healthy cells in the same cluster               鈺慭n"
+                    f"  鈺? 螖={s12_delta:+.4f}  p={s12_pval:.4f}                       鈺慭n"
+                    f"  鈺? 鈫?Suitable for Discussion (not Results)              鈺慭n"
+                    f"  鈺氣晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨暆"
                 )
             else:
                 self.logger.info(
-                    f"\n  ┌─────────────────────────────────────────────────────┐\n"
-                    f"  │  COMPENSATORY HYPOTHESIS NOT SUPPORTED                │\n"
-                    f"  │  Δ={s12_delta:+.4f}  p={s12_pval:.4f}                      │\n"
-                    f"  │  Cluster-mean difference attributable to subtype      │\n"
-                    f"  │  composition (mechanism A) — consistent with zonation │\n"
-                    f"  └─────────────────────────────────────────────────────┘"
+                    f"\n  鈹屸攢鈹怽n"
+                    f"  鈹? COMPENSATORY HYPOTHESIS NOT SUPPORTED                鈹俓n"
+                    f"  鈹? 螖={s12_delta:+.4f}  p={s12_pval:.4f}                      鈹俓n"
+                    f"  鈹? Cluster-mean difference attributable to subtype      鈹俓n"
+                    f"  鈹? composition (mechanism A) 鈥?consistent with zonation 鈹俓n"
+                    f"  ------------------------------------------------------------\n"
                 )
         else:
             self.logger.warning("  S1/S2-like cluster not found or test failed.")
 
-        # ── Figure ────────────────────────────────────────────────────────
+        #  Figure 
         if not plot_rows:
             self.logger.warning(
-                "  No clusters had sufficient cells — "
+                "  No clusters had sufficient cells 鈥?"
                 "compensatory_validation.pdf not generated."
             )
             return result
@@ -1224,7 +1431,7 @@ class DiseaseDiscoveryExperiment:
                         f"p={pval:.3f}" if pval >= 0.001
                         else "p<0.001"
                     )
-                    sig_txt += "  ✓" if pval < 0.05 else "  n.s."
+                    sig_txt += "  significant" if pval < 0.05 else "  n.s."
                 else:
                     sig_txt = "test failed"
                 ax.text(
@@ -1233,10 +1440,10 @@ class DiseaseDiscoveryExperiment:
                 )
 
                 delta   = d_val - h_val
-                d_arrow = "↑" if delta > 0 else "↓"
+                d_arrow = "up" if delta > 0 else "down"
                 ax.set_title(
                     f"{label.replace('Functional PT ', '').replace('(', '').replace(')', '')}\n"
-                    f"{target_gene}: disease {d_arrow} healthy  (Δ={delta:+.3f})",
+                    f"{target_gene}: disease {d_arrow} healthy  (螖={delta:+.3f})",
                     fontsize=9, fontweight="bold",
                     color=cluster_col,
                 )
@@ -1248,10 +1455,10 @@ class DiseaseDiscoveryExperiment:
 
             verdict = result.get("compensatory_supported")
             verdict_str = (
-                "SUPPORTED — disease cells show higher SLC5A2 within S1/S2-like cluster"
+                "SUPPORTED 鈥?disease cells show higher SLC5A2 within S1/S2-like cluster"
                 if verdict is True
                 else (
-                    "NOT SUPPORTED — difference attributable to subtype composition"
+                    "NOT SUPPORTED 鈥?difference attributable to subtype composition"
                     if verdict is False
                     else "INCONCLUSIVE"
                 )
@@ -1279,36 +1486,57 @@ class DiseaseDiscoveryExperiment:
 
         return result
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # UMAP — 4 panels
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
+    # UMAP 鈥?4 panels
+    # 
 
     def _plot_umap(self, pt_cells: Any, output_dir: str) -> None:
         """
         4-panel UMAP:
           1. Leiden cluster IDs
-          2. Biological states (explicit STATE_PALETTE — prevents alphabetical scramble)
+          2. Biological states (explicit STATE_PALETTE 鈥?prevents alphabetical scramble)
           3. Cell origin (Healthy / Disease)
           4. DPT pseudotime (if available)
 
         The explicit palette on panel 2 is CRITICAL: Scanpy assigns colours by
         category sort order, which differs between panels 1 and 2 unless forced.
         """
-        self.logger.info("Computing UMAP embedding …")
-        sc.tl.umap(pt_cells)
+        self.logger.info("Computing UMAP embedding...")
+        # sc.tl.umap(pt_cells)
+        if "paga" in pt_cells.uns and "connectivities" in pt_cells.uns["paga"]:
+            sc.pl.paga(pt_cells, show=False)
+        # sc.tl.umap(
+        #     pt_cells,
+        #     min_dist=0.01,
+        #     spread=3.0,
+        #     init_pos="paga",
+        #     random_state=42,
+        # )
+        sc.tl.umap(
+            pt_cells,
+            min_dist=0.01,
+            spread=3.0,
+            init_pos="spectral",
+            random_state=42,
+            gamma=5.0,
+            negative_sample_rate=25,
+            maxiter=1000,
+        )
+        plt.close("all")
+
 
         has_dpt = "dpt_pseudotime" in pt_cells.obs.columns
         n_panels = 4 if has_dpt else 3
         fig, axes = plt.subplots(1, n_panels, figsize=(7 * n_panels, 6.5))
 
-        # Panel 1 — Leiden cluster IDs
+        # Panel 1 鈥?Leiden cluster IDs
         sc.pl.umap(
             pt_cells, color="leiden_clusters",
             ax=axes[0], show=False,
             title="Leiden Clusters",
         )
 
-        # Panel 2 — Biological states with EXPLICIT palette
+        # Panel 2 鈥?Biological states with EXPLICIT palette
         # Categories must exist in obs before passing palette dict
         existing_states = pt_cells.obs["biological_state"].unique().tolist()
         palette_filtered = {k: v for k, v in STATE_PALETTE.items()
@@ -1320,7 +1548,7 @@ class DiseaseDiscoveryExperiment:
             palette=palette_filtered,
         )
 
-        # Panel 3 — Cell origin
+        # Panel 3 鈥?Cell origin
         if "disease_status" in pt_cells.obs.columns:
             sc.pl.umap(
                 pt_cells, color="disease_status",
@@ -1331,13 +1559,13 @@ class DiseaseDiscoveryExperiment:
             n_h = (pt_cells.obs["disease_status"] == "Healthy_Reference").sum()
             n_d = (pt_cells.obs["disease_status"] == "Disease_Query").sum()
             self.logger.info(
-                f"UMAP panel 3 — Healthy={n_h}, Disease={n_d}"
+                f"UMAP panel 3 鈥?Healthy={n_h}, Disease={n_d}"
             )
         else:
             axes[2].set_visible(False)
-            self.logger.warning("'disease_status' absent — panel 3 suppressed.")
+            self.logger.warning("'disease_status' absent 鈥?panel 3 suppressed.")
 
-        # Panel 4 — DPT pseudotime
+        # Panel 4 鈥?DPT pseudotime
         if has_dpt:
             sc.pl.umap(
                 pt_cells, color="dpt_pseudotime",
@@ -1352,9 +1580,9 @@ class DiseaseDiscoveryExperiment:
         plt.close()
         self.logger.info(f"UMAP ({n_panels} panels) saved: {save_path}")
 
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
     # PAGA trajectory
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
 
     def _plot_paga_trajectory(
         self,
@@ -1370,7 +1598,7 @@ class DiseaseDiscoveryExperiment:
         chain.  DPT linearises this, which is explicitly acknowledged in the figure
         subtitle.
         """
-        self.logger.info("Plotting PAGA trajectory (convergent topology) …")
+        self.logger.info("Plotting PAGA trajectory (convergent topology)...")
         try:
             label_str = "  |  ".join(
                 f"Cluster {k} = {v}"
@@ -1400,41 +1628,41 @@ class DiseaseDiscoveryExperiment:
             self.logger.warning(f"PAGA plot failed (non-fatal): {e}")
             plt.close("all")
 
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
     # Marker gene trends
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
 
     def _plot_marker_trends(self, pt_cells: Any, output_dir: str) -> None:
         """
         Gaussian-smoothed marker gene dynamics along rank-transformed DPT.
 
         Markers plotted (in order):
-          SLC5A2  — epithelial function; expected monotonic decrease
-          LRP2    — epithelial function; expected monotonic decrease
-          VCAM1   — acute stress;        expected monotonic increase
-          HAVCR1  — chronic injury;      expected monotonic increase
+          SLC5A2  鈥?epithelial function; expected monotonic decrease
+          LRP2    鈥?epithelial function; expected monotonic decrease
+          VCAM1   鈥?acute stress;        expected monotonic increase
+          HAVCR1  鈥?chronic injury;      expected monotonic increase
 
         Important caveat note in figure subtitle:
           DPT is computed from S1/S2-like root only.  The convergent PAGA
           topology means the DPT x-axis represents an average path through the
           manifold, not a unique biological timeline.
         """
-        self.logger.info("Plotting marker gene trends along DPT …")
+        self.logger.info("Plotting marker gene trends along DPT...")
 
         if "dpt_pseudotime" not in pt_cells.obs:
-            self.logger.warning("dpt_pseudotime missing — skipping.")
+            self.logger.warning("dpt_pseudotime missing 鈥?skipping.")
             return
 
         target_order     = ["SLC5A2", "LRP2", "VCAM1", "HAVCR1"]
         available        = [m for m in target_order if m in pt_cells.var_names]
         if not available:
-            self.logger.warning("No target markers in var_names — skipping.")
+            self.logger.warning("No target markers in var_names 鈥?skipping.")
             return
 
         ptime   = pt_cells.obs["dpt_pseudotime"].values
         finite  = np.isfinite(ptime)
         if finite.sum() < 10:
-            self.logger.warning("< 10 finite pseudotime values — skipping.")
+            self.logger.warning("< 10 finite pseudotime values 鈥?skipping.")
             return
 
         t_valid  = ptime[finite]
@@ -1453,10 +1681,10 @@ class DiseaseDiscoveryExperiment:
                     state_medians[state] = float(np.median(t_sorted[mask]))
 
         marker_style = {
-            "SLC5A2": ("#1565C0", "SLC5A2 — Functional / Epithelial (S1/S2 marker)"),
-            "LRP2":   ("#1565C0", "LRP2 — Functional / Epithelial"),
-            "VCAM1":  ("#E65100", "VCAM1 — Acute Stress / Injury"),
-            "HAVCR1": ("#B71C1C", "HAVCR1 — Chronic Injury / EMT"),
+            "SLC5A2": ("#1565C0", "SLC5A2 鈥?Functional / Epithelial (S1/S2 marker)"),
+            "LRP2":   ("#1565C0", "LRP2 鈥?Functional / Epithelial"),
+            "VCAM1":  ("#E65100", "VCAM1 鈥?Acute Stress / Injury"),
+            "HAVCR1": ("#B71C1C", "HAVCR1 鈥?Chronic Injury / EMT"),
         }
 
         fig, axes = plt.subplots(
@@ -1470,7 +1698,7 @@ class DiseaseDiscoveryExperiment:
         fig.suptitle(
             "Marker Gene Dynamics Along DPT Pseudotime\n"
             "(root = Functional PT S1/S2-like  |  "
-            "x-axis is rank-transformed DPT — approximate for convergent manifold;\n"
+            "x-axis is rank-transformed DPT 鈥?approximate for convergent manifold;\n"
             "see PAGA figure for topologically accurate cluster connectivity)",
             fontsize=9, fontweight="bold", y=1.02,
         )
@@ -1511,7 +1739,7 @@ class DiseaseDiscoveryExperiment:
 
         axes[-1].set_xlabel(
             "Rank-transformed DPT  "
-            "(S1/S2-like root → Injured PT, convergent manifold approximation)",
+            "(S1/S2-like root 鈫?Injured PT, convergent manifold approximation)",
             fontsize=9,
         )
         plt.tight_layout()
@@ -1520,9 +1748,9 @@ class DiseaseDiscoveryExperiment:
         plt.close()
         self.logger.info(f"Marker trends saved: {save_path}")
 
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
     # Cluster characterisation heatmap
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
 
     def _plot_cluster_characterization(
         self, characterization: Dict[str, Any], output_dir: str
@@ -1531,7 +1759,7 @@ class DiseaseDiscoveryExperiment:
         2-row heatmap: Functional Score (SLC5A2/LRP2) vs Injury Score (VCAM1/HAVCR1)
         with biological state names as column headers ordered by STATE_ORDER.
         """
-        self.logger.info("Plotting cluster characterisation heatmap …")
+        self.logger.info("Plotting cluster characterisation heatmap...")
         labels = characterization["cluster_labels"]
 
         # Build DataFrame in canonical STATE_ORDER
@@ -1548,7 +1776,7 @@ class DiseaseDiscoveryExperiment:
                 })
 
         if not col_data:
-            self.logger.warning("No matching states for heatmap — skipping.")
+            self.logger.warning("No matching states for heatmap 鈥?skipping.")
             return
 
         df = pd.DataFrame(col_data).set_index("state")
@@ -1564,7 +1792,7 @@ class DiseaseDiscoveryExperiment:
         )
         ax.set_title(
             "Convergent Dedifferentiation:\n"
-            "Functional Loss (↓) and Injury Gain (↑) across PT Zonation States",
+            "Functional Loss (鈫? and Injury Gain (鈫? across PT Zonation States",
             fontweight="bold", fontsize=9,
         )
         ax.set_xticklabels(ax.get_xticklabels(), rotation=25, ha="right", fontsize=8)
@@ -1574,9 +1802,9 @@ class DiseaseDiscoveryExperiment:
         plt.close()
         self.logger.info(f"Cluster characterisation heatmap saved: {save_path}")
 
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
     # Cell-origin composition barplot
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
 
     def _plot_origin_composition(
         self, pt_cells: Any, output_dir: str
@@ -1592,19 +1820,19 @@ class DiseaseDiscoveryExperiment:
 
         Expected pattern (supports convergent dedifferentiation)
         --------------------------------------------------------
-        • Functional PT (S1/S2-like): high % healthy (numerically dominant segment)
-        • Functional PT (S3-like):    highest % healthy (relatively preserved in DKD)
-        • Injured PT:                 highest % disease (terminal disease state)
+        鈥?Functional PT (S1/S2-like): high % healthy (numerically dominant segment)
+        鈥?Functional PT (S3-like):    highest % healthy (relatively preserved in DKD)
+        鈥?Injured PT:                 highest % disease (terminal disease state)
 
         Prints the full composition table to the logger for copy-paste into the
         paper Methods / Results sections.
         """
-        self.logger.info("Plotting cell-origin composition barplot …")
+        self.logger.info("Plotting cell-origin composition barplot...")
 
         for col in ("disease_status", "biological_state"):
             if col not in pt_cells.obs.columns:
                 self.logger.warning(
-                    f"'{col}' missing from obs — skipping composition plot."
+                    f"'{col}' missing from obs 鈥?skipping composition plot."
                 )
                 return
 
@@ -1618,13 +1846,13 @@ class DiseaseDiscoveryExperiment:
         # Reindex to canonical state order
         existing = [s for s in STATE_ORDER if s in count_df.index]
         if not existing:
-            self.logger.warning("No canonical states found — skipping composition plot.")
+            self.logger.warning("No canonical states found 鈥?skipping composition plot.")
             return
         count_df = count_df.reindex(existing)
 
         prop_df = count_df.div(count_df.sum(axis=1), axis=0) * 100
 
-        # ── Quantitative log (for Methods / Results copy-paste) ────────────
+        #  Quantitative log (for Methods / Results copy-paste) 
         self.logger.info(
             "\n=== Cell-Origin Composition (copy-paste for paper) ==="
         )
@@ -1640,7 +1868,7 @@ class DiseaseDiscoveryExperiment:
                 f"Disease={d_abs:5d} ({d_pct:5.1f}%)"
             )
 
-        # ── Plot ──────────────────────────────────────────────────────────
+        #  Plot 
         bar_colours = [
             ORIGIN_PALETTE.get(col, "#888888") for col in prop_df.columns
         ]
@@ -1651,7 +1879,7 @@ class DiseaseDiscoveryExperiment:
             edgecolor="white", linewidth=0.6,
         )
 
-        # Percentage annotation inside bars (only if ≥ 5%)
+        # Percentage annotation inside bars (only if 鈮?5%)
         for bar_i, state in enumerate(prop_df.index):
             cum = 0.0
             for col in prop_df.columns:
@@ -1691,9 +1919,9 @@ class DiseaseDiscoveryExperiment:
         plt.close()
         self.logger.info(f"Origin composition barplot saved: {save_path}")
 
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
     # GO pathway enrichment
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
 
     def _plot_go_enrichment(
         self,
@@ -1711,7 +1939,7 @@ class DiseaseDiscoveryExperiment:
            These are statistically significant in injured cells only because
            total-RNA collapse makes them appear relatively upregulated.
         2. pvals_adj < 0.01  (stricter than default 0.05)
-        3. logfoldchanges > 1.0  (≥ 2× fold-change; biologically meaningful)
+        3. logfoldchanges > 1.0  (鈮?2脳 fold-change; biologically meaningful)
         4. Sort by logfoldchanges DESC to prioritise strongest signals.
         5. Minimum 10 genes required per group (conservative guard).
 
@@ -1724,12 +1952,12 @@ class DiseaseDiscoveryExperiment:
         """
         if not _GSEAPY_AVAILABLE:
             self.logger.warning(
-                "gseapy not installed — skipping GO enrichment. "
+                "gseapy not installed 鈥?skipping GO enrichment. "
                 "Install with: pip install gseapy"
             )
             return
 
-        self.logger.info("Running GO Pathway Enrichment (strict filtering) …")
+        self.logger.info("Running GO Pathway Enrichment (strict filtering)...")
         labels = characterization["cluster_labels"]
         inv    = {v: k for k, v in labels.items()}
         s12_id = inv.get("Functional PT (S1/S2-like)")
@@ -1742,8 +1970,8 @@ class DiseaseDiscoveryExperiment:
             )
             return
 
-        # ── DEA ───────────────────────────────────────────────────────────
-        self.logger.info("Computing DEGs (Wilcoxon rank-sum) …")
+        #  DEA 
+        self.logger.info("Computing DEGs (Wilcoxon rank-sum)...")
         sc.tl.rank_genes_groups(
             pt_cells, groupby="leiden_clusters", method="wilcoxon"
         )
@@ -1774,7 +2002,7 @@ class DiseaseDiscoveryExperiment:
         genes_s12 = _clean_genes(s12_id)
         genes_inj = _clean_genes(inj_id)
 
-        # ── Enrichr queries ────────────────────────────────────────────────
+        #  Enrichr queries 
         go_results: Dict[str, pd.DataFrame] = {}
         for label, gene_list in [
             ("Functional PT (S1/S2-like)", genes_s12),
@@ -1782,7 +2010,7 @@ class DiseaseDiscoveryExperiment:
         ]:
             if len(gene_list) < 10:
                 self.logger.warning(
-                    f"  '{label}': only {len(gene_list)} genes after strict filter — "
+                    f"  '{label}': only {len(gene_list)} genes after strict filter 鈥?"
                     "skipping GO. Consider relaxing logfoldchanges threshold."
                 )
                 continue
@@ -1812,20 +2040,25 @@ class DiseaseDiscoveryExperiment:
             self.logger.warning("No GO results to plot.")
             return
 
-        # ── Bubble plot ────────────────────────────────────────────────────
+        #  Bubble plot 
         df_plot = pd.concat(go_results.values())
-        df_plot["Term"] = df_plot["Term"].apply(
+        df_plot["Term_full"] = df_plot["Term"].astype(str)
+        df_plot["Term"] = df_plot["Term_full"].apply(
             lambda x: x.split("(GO:")[0].strip()
         )
-        df_plot["Term"] = df_plot["Term"].apply(
-            lambda x: x[:52] + "…" if len(x) > 52 else x
+        df_plot["Term_display"] = df_plot["Term"].apply(
+            lambda x: x[:52] + "..." if len(x) > 52 else x
         )
         df_plot["log_p"] = -np.log10(df_plot["Adjusted P-value"])
+        df_plot.to_csv(
+            os.path.join(output_dir, "go_enrichment_bubble.csv"),
+            index=False,
+        )
 
         plt.figure(figsize=(10.0, max(5.5, len(df_plot) * 0.45)))
         ax = sns.scatterplot(
             data=df_plot,
-            x="Cluster", y="Term",
+            x="Cluster", y="Term_display",
             size="GeneRatio", hue="log_p",
             sizes=(80, 500),
             palette="YlOrRd",
@@ -1852,23 +2085,23 @@ class DiseaseDiscoveryExperiment:
         plt.close()
         self.logger.info(f"GO enrichment bubble plot saved: {save_path}")
 
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
     # Main experiment entry point
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
 
     def run_experiment(self) -> Dict[str, Any]:
         """
         Execute the full Experiment 3 pipeline.
 
-        Joint Manifold Architecture — step by step
+        Joint Manifold Architecture 鈥?step by step
         -------------------------------------------
         1. Train SymRelEnc on ALL healthy cells (multi-type; required for
            contrastive negative pairs).
         2. Extract Healthy PT + Disease PT cells; tag disease_status.
-        3. ad.concat → combined_pt (single AnnData with both origins).
-        4. transform() ONCE on combined_pt → SymRelEnc joint KNN graph.
+        3. ad.concat 鈫?combined_pt (single AnnData with both origins).
+        4. transform() ONCE on combined_pt 鈫?SymRelEnc joint KNN graph.
            Healthy cells become real topological anchors.
-        5. Leiden → filter → dynamic resolution.
+        5. Leiden 鈫?filter 鈫?dynamic resolution.
         6. PAGA (convergent topology detection).
         7. Root = cluster with highest absolute Healthy_Reference count
            (marker-free; justified by S1/S2 numerical dominance in kidney).
@@ -1886,12 +2119,12 @@ class DiseaseDiscoveryExperiment:
             output_dir = os.path.join(base_dir, "disease_discovery")
             ensure_output_dir(output_dir)
 
-            # ── Step 1: Train ──────────────────────────────────────────────
+            #  Step 1: Train 
             model = self.train_or_load_model(reference_data, output_dir)
 
-            # ── Step 2: Extract & tag PT cells ────────────────────────────
+            #  Step 2: Extract & tag PT cells 
             self.logger.info(
-                f"Extracting '{self.target_cell_type}' cells from both conditions …"
+                f"Extracting '{self.target_cell_type}' cells from both conditions..."
             )
             ref_pt = reference_data[
                 reference_data.obs[self.cell_type_column] == self.target_cell_type
@@ -1912,7 +2145,7 @@ class DiseaseDiscoveryExperiment:
                     f"disease={qry_pt.n_obs} (min 50 each)."
                 )
 
-            # ── Step 3: Joint AnnData ──────────────────────────────────────
+            #  Step 3: Joint AnnData 
             combined_pt = ad.concat(
                 [ref_pt, qry_pt],
                 join="inner",
@@ -1921,19 +2154,24 @@ class DiseaseDiscoveryExperiment:
             )
             combined_pt.obs_names_make_unique()
             self.logger.info(
-                f"Joint PT: {combined_pt.n_obs} cells × {combined_pt.n_vars} genes"
+                f"Joint PT: {combined_pt.n_obs} cells 脳 {combined_pt.n_vars} genes"
             )
 
-            # ── Step 4: Build SymRelEnc joint KNN graph ────────────────────
+            #  Step 4: Build SymRelEnc joint KNN graph 
             mapped_pt = self.construct_reference_mapping(model, combined_pt)
 
-            # ── Step 5–9: Trajectory discovery ────────────────────────────
+            #  Step 5鈥?: Trajectory discovery 
             traj = self.discover_adaptive_trajectory(mapped_pt)
 
-            # ── Step 10: Visualisations ────────────────────────────────────
+            #  Step 10: Visualisations 
             self.create_visualizations(traj, output_dir)
+            figure5_manifest = self._export_figure5_rebuild_data(
+                traj["pt_cells"],
+                traj["characterization"],
+                output_dir,
+            )
 
-            # ── Step 11: Results dict & reports ───────────────────────────
+            #  Step 11: Results dict & reports 
             results = {
                 "experiment_type": "pt_zonation_convergent_dedifferentiation",
                 "dataset_info": {
@@ -1961,6 +2199,7 @@ class DiseaseDiscoveryExperiment:
                     "root_cluster":   traj["root_cluster"],
                 },
                 "characterization": traj["characterization"],
+                "figure5_rebuild_data": figure5_manifest,
                 "output_directory": output_dir,
             }
 
@@ -1977,9 +2216,9 @@ class DiseaseDiscoveryExperiment:
             self.logger.error(f"Experiment 3 failed: {exc}")
             raise
 
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
     # Summary report
-    # ──────────────────────────────────────────────────────────────────────────
+    # 
 
     def _create_summary_report(
         self,
@@ -1996,7 +2235,7 @@ class DiseaseDiscoveryExperiment:
 
         with open(report_path, "w", encoding="utf-8") as f:
             f.write(
-                "EXPERIMENT 3 — PT ZONATION AND CONVERGENT DEDIFFERENTIATION IN DKD\n"
+                "EXPERIMENT 3 鈥?PT ZONATION AND CONVERGENT DEDIFFERENTIATION IN DKD\n"
                 "Joint Manifold Architecture (Cytoneighbor)\n"
                 + "=" * 68 + "\n\n"
             )
@@ -2008,12 +2247,12 @@ class DiseaseDiscoveryExperiment:
                 "distinct healthy PT segments (S1/S2-like and S3-like) that retain\n"
                 "anatomical identity within the joint embedding.  Under DKD, both\n"
                 "segments undergo parallel progressive dedifferentiation, converging\n"
-                "to a shared Injured PT terminal state (VCAM1↑↑, HAVCR1↑↑, ECM genes).\n"
+                "to a shared Injured PT terminal state (VCAM1鈫戔啈, HAVCR1鈫戔啈, ECM genes).\n"
                 "PAGA reveals a triangular / convergent topology, not a linear chain.\n\n"
-                "  Functional PT (S1/S2-like)  ─┐\n"
-                "    SLC5A2↑↑ LRP2↑↑            ├──→  Injured PT\n"
-                "  Functional PT (S3-like)      ─┘      VCAM1↑↑ HAVCR1↑↑\n"
-                "    SLC5A2↓  (S3 anatomy)\n\n"
+                "  Functional PT (S1/S2-like)  鈹怽n"
+                "    SLC5A2鈫戔啈 LRP2鈫戔啈            鈹溾攢鈫? Injured PT\n"
+                "  Functional PT (S3-like)      鈹?     VCAM1鈫戔啈 HAVCR1鈫戔啈\n"
+                "    SLC5A2鈫? (S3 anatomy)\n\n"
             )
 
             f.write("DATASET INFORMATION\n")
@@ -2021,9 +2260,9 @@ class DiseaseDiscoveryExperiment:
             f.write(f"  Total cells (full dataset):      {di['total_cells']}\n")
             f.write(f"  Total genes (post-HVG):          {di['total_genes']}\n")
             f.write(f"  Healthy cells (training):        {di['reference_cells']}\n")
-            f.write(f"    └─ Healthy PT cells:           {di['reference_pt_cells']}\n")
+            f.write(f"    鈹斺攢 Healthy PT cells:           {di['reference_pt_cells']}\n")
             f.write(f"  Disease cells (query):           {di['query_cells']}\n")
-            f.write(f"    └─ Disease PT cells:           {di['query_pt_cells']}\n")
+            f.write(f"    鈹斺攢 Disease PT cells:           {di['query_pt_cells']}\n")
             f.write(f"  Combined PT (joint manifold):    {di['combined_pt_cells']}\n\n")
 
             f.write("ANALYSIS PARAMETERS\n")
@@ -2046,7 +2285,7 @@ class DiseaseDiscoveryExperiment:
             f.write("  Distribution:\n")
             for cid, cnt in cr["cluster_counts"].items():
                 label = ch["cluster_labels"].get(cid, f"Cluster {cid}")
-                f.write(f"    Cluster {cid}: {cnt:6} cells  → {label}\n")
+                f.write(f"    Cluster {cid}: {cnt:6} cells  鈫?{label}\n")
             f.write("\n")
 
             f.write("BIOLOGICAL CHARACTERISATION\n")
@@ -2091,7 +2330,7 @@ class DiseaseDiscoveryExperiment:
                 "  3. Root selection (marker-free): the cluster with the highest\n"
                 "     ABSOLUTE number of Healthy_Reference cells is selected as root.\n"
                 "     Absolute count is used (rather than purity %) because the S1/S2\n"
-                "     segment constitutes ~60–70% of PT tubular volume (Lindström 2021)\n"
+                "     segment constitutes ~60鈥?0% of PT tubular volume (Lindstr枚m 2021)\n"
                 "     and thus dominates numerically.  This eliminates any circular\n"
                 "     dependence between root selection and downstream marker labelling.\n\n"
                 "  4. DPT is computed from the S1/S2-like root as an approximation.\n"
@@ -2156,3 +2395,7 @@ def run_disease_discovery(config: Dict[str, Any]) -> Dict[str, Any]:
     """
     experiment = DiseaseDiscoveryExperiment(config)
     return experiment.run_experiment()
+
+
+
+

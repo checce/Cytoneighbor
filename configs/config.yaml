@@ -37,20 +37,20 @@ experiments:
       - "NK cells"        # Hard: Similar to NKT (NCAM1, KLRD1)
       - "NKT cells"       # Extreme: Shares markers with both NK and CD8+ T cells
 
-    # === 关键修正 1: 强制保留的核心 Marker (防止被HVG过滤导致特征坍缩) ===
+    # === Key Fix 1: Mandatory core markers (prevent feature collapse from HVG filtering) ===
     mandatory_genes:
-      # T Cell Lineage (解决 CD4 vs CD8 混淆的核心)
+      # T Cell Lineage (resolving CD4 vs CD8 confusion)
       - "CD4"
       - "CD8A"
       - "CD8B"
-      # Pan-T & NK Markers (解决 NK vs NKT 混淆)
+      # Pan-T & NK Markers (resolving NK vs NKT confusion)
       - "CD3D"
       - "CD3E"
       - "CD3G"
       - "NCAM1"  # CD56
       - "KLRD1"  # CD94
       - "FCGR3A" # CD16
-      # Subtype Function (增强细粒度区分)
+      # Subtype Function (enhance fine-grained discrimination)
       - "IL7R"
       - "CCR7"
       - "S100A4"
@@ -58,17 +58,17 @@ experiments:
       - "GZMB"
       - "PRF1"
 
-    # === 关键修正 2: 针对极限分辨率的模型参数重载 ===
-    # 注意：需要在 trainer.py 或 benchmark_resolution.py 中合并此配置到 model_params
+    # === Key Fix 2: Model parameter overrides for extreme resolution ===
+    # Note: merge this config into model_params in trainer.py or benchmark_resolution.py
     model_params_override:
-      rank_margin: 0.5         # [重点] 默认0.5太软，CD4/CD8需要更强的推力(0.8)将其分开
-      lambda_rank: 1.0         # [重点] 提高Rank Loss权重，优先保证类间距离而非概率拟合
+      rank_margin: 0.5         # [Key] Default 0.5 is too soft; CD4/CD8 needs stronger push (0.8) to separate them
+      lambda_rank: 1.0         # [Key] Increase Rank Loss weight, prioritize inter-class distance over probability fitting
 
       synth_mult_per_dt: 0.5  
       # synth_alpha: 0.4 
 
-      # neg_cache_pick_p: 0.95   # 增加挖掘难负样本(Hard Negative)的概率
-      batch_size: 1024         # 增大Batch以增加采样到互斥对(CD4+CD8)的概率
+      # neg_cache_pick_p: 0.95   # Increase probability of mining hard negative samples
+      batch_size: 1024         # Larger batch to increase probability of sampling mutually exclusive pairs (CD4+CD8)
     
     # Evaluation parameters
     # metrics: ["iLISI", "cLISI", "F1", "ASW"]
@@ -105,33 +105,33 @@ experiments:
     healthy_condition: "normal"
     disease_condition: "type 2 diabetes mellitus"
     
-    # === 关键修正 1: 锁定目标细胞 ===
+    # === Key Fix 1: Lock target cell type ===
     target_cell_type: "epithelial cell of proximal tubule"
     
-    # === 关键修正 2: 聚类与轨迹参数 (已优化) ===
-    # n_neighbors: 40          # 构建邻接图的邻居数 (推荐 15-20，平衡局部与全局结构)
-    # leiden_resolution: 0.15    # 聚类分辨率 (推荐 0.3-0.4，避免过度碎片化)
-    # paga_threshold: 0.01      # 轨迹连通性阈值 (0.1-0.2，过滤弱连接)
+    # === Key Fix 2: Clustering and trajectory parameters (optimized) ===
+    # n_neighbors: 40          # Neighbors for adjacency graph (recommend 15-20, balance local and global structure)
+    # leiden_resolution: 0.15    # Clustering resolution (recommend 0.3-0.4, avoid excessive fragmentation)
+    # paga_threshold: 0.01      # Trajectory connectivity threshold (0.1-0.2, filter weak connections)
 
-    # n_neighbors: 30          # [修改] 从 40 降回 30，让局部连接更紧密，有利于切分
-    # leiden_resolution: 0.5   # [修改] 从 0.15 大幅提高到 0.5 (甚至可以尝试0.4-0.8)，去切开致密的深度特征图
-    # paga_threshold: 0.01     # [保持不变]
+    # n_neighbors: 30          # [Modified] Reduced from 40 to 30 for tighter local connectivity, better slicing
+    # leiden_resolution: 0.5   # [Modified] Increased from 0.15 to 0.5 (can try 0.4-0.8), to slice the dense deep feature map
+    # paga_threshold: 0.01     # [Unchanged]
 
-    n_neighbors: 15         # [保持不变] 15 是对的，它成功把“铁疙瘩”展开成了“线”
-    leiden_resolution: 0.5   # [重点修改] 从 1.0 降到 0.4。作为起点，让程序慢慢往上加
-    paga_threshold: 0.01     #[保持不变]
+    n_neighbors: 15         # [Unchanged] 15 is correct; it successfully unfolded the compact cluster into a trajectory
+    leiden_resolution: 0.5   # [Key modification] Reduced from 1.0 to 0.4. Use as starting point, gradually increase
+    paga_threshold: 0.01     # [Unchanged]
     
-    # === 内存优化参数 ===
-    n_top_genes: 3000         # HVG筛选保留的基因数 (默认3000，可调整为2000-5000)
+    # === Memory optimization parameters ===
+    n_top_genes: 3000         # Number of genes retained after HVG filtering (default 3000, adjust to 2000-5000)
     
-    # === 关键修正 3: 生物学验证 Marker (DKD特异) ===
-    # Adaptive (代偿态): SGLT2 (SLC5A2) 负责高滤过时的葡萄糖重吸收
+    # === Key Fix 3: Biological validation markers (DKD-specific) ===
+    # Adaptive (compensatory): SGLT2 (SLC5A2) responsible for glucose reabsorption during hyperfiltration
     adaptive_markers: ["SLC5A2", "LRP2"]  
     
-    # Injured (损伤态): VCAM1 和 KIM-1 (HAVCR1) 是经典的 PT 损伤标志
+    # Injured (damage): VCAM1 and KIM-1 (HAVCR1) are classic PT injury markers
     injury_markers: ["VCAM1", "HAVCR1"]   
     
-    # 差异分析参数 (保持不变)
+    # Differential analysis parameters (unchanged)
     differential_expression:
       method: "wilcoxon"
       min_fold_change: 1.5

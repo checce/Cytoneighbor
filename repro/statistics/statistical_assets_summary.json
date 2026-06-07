@@ -1,0 +1,10 @@
+{
+  "annotation_fold_rows": 399,
+  "annotation_paired_tests": 156,
+  "annotation_meta_tests": 6,
+  "integration_rows": 15,
+  "integration_tests": 16,
+  "dkd_targeted_rows": 3,
+  "dkd_external_replication_rows": 3,
+  "mechanism_rows": 1
+}

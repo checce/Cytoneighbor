@@ -4,6 +4,7 @@ Demonstrates that Gene-CutMix repairs manifold breaks and recovers rare cells.
 """
 
 import os
+import json
 import copy
 import numpy as np
 import pandas as pd
@@ -15,9 +16,13 @@ import logging
 
 from scipy.sparse.csgraph import connected_components
 
-from src.utils import BaseExperiment, DataLoader, MetricsCalculator, VisualizationEngine
-from src.trainer import CytoneighborWrapper
-from src.model import transform
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from cytoneighbor.utils import BaseExperiment, DataLoader, MetricsCalculator, VisualizationEngine
+from cytoneighbor.trainer import CytoneighborWrapper
+from cytoneighbor.model import transform
 
 # =============================================================================
 # Publication-ready font & style configuration (Nature Methods standard)
@@ -87,6 +92,133 @@ class MechanismAnalysisExperiment(BaseExperiment):
 
     # ------------------------------------------------------------------
 
+    def _json_default(self, obj):
+        if isinstance(obj, (np.integer,)):
+            return int(obj)
+        if isinstance(obj, (np.floating,)):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+
+    def _collect_rare_query_details(self, ref_data: sc.AnnData, query_data: sc.AnnData,
+                                    model: CytoneighborWrapper) -> Dict[str, Any]:
+        """
+        Export query-level retrieval details so Figure 5 can quantify local support
+        rather than relying only on aggregate Recall@K.
+        """
+        N_ref = len(ref_data)
+        N_query = len(query_data)
+        total_rare_in_ref = int((ref_data.obs[self.cell_type_column] == self.rare_cell_type).sum())
+        max_k = max(self.recall_k_values)
+        safe_k = max_k + N_query
+
+        combined_adata = ad.concat([ref_data, query_data], index_unique="-")
+        full_indices, _ = model.predict_neighbors(combined_adata, k=safe_k)
+        query_indices = full_indices[-N_query:]
+
+        ref_labels = ref_data.obs[self.cell_type_column].astype(str).values
+        ref_ids = ref_data.obs_names.astype(str).values
+        query_ids = query_data.obs_names.astype(str).values
+
+        query_rows = []
+        neighbor_rows = []
+        for i, row in enumerate(query_indices):
+            ref_only_neighbors = np.asarray(row[row < N_ref], dtype=np.int64)
+            top_max = ref_only_neighbors[:max_k]
+            top_labels = ref_labels[top_max] if len(top_max) > 0 else np.array([], dtype=object)
+            rare_mask = (top_labels == self.rare_cell_type)
+
+            first_rank = int(np.where(rare_mask)[0][0] + 1) if np.any(rare_mask) else max_k + 1
+            row_payload = {
+                'query_cell_id': str(query_ids[i]),
+                'total_rare_in_ref': total_rare_in_ref,
+                'first_correct_rare_neighbor_rank': first_rank,
+            }
+            for k in self.recall_k_values:
+                top_k = top_labels[:k]
+                n_hits = int(np.sum(top_k == self.rare_cell_type))
+                row_payload[f'n_hits_at_{k}'] = n_hits
+                row_payload[f'recall_at_{k}'] = float(n_hits / total_rare_in_ref) if total_rare_in_ref else 0.0
+            query_rows.append(row_payload)
+
+            for rank, ref_idx in enumerate(top_max, start=1):
+                ref_label = str(ref_labels[ref_idx])
+                neighbor_rows.append({
+                    'query_cell_id': str(query_ids[i]),
+                    'neighbor_rank': int(rank),
+                    'reference_cell_id': str(ref_ids[ref_idx]),
+                    'reference_label': ref_label,
+                    'is_rare_neighbor': bool(ref_label == self.rare_cell_type),
+                })
+
+        return {
+            'query_summary': query_rows,
+            'neighbor_ranks': neighbor_rows,
+        }
+
+    def _save_publication_raw_assets(self, results: Dict[str, Any]) -> None:
+        """Persist plot-ready raw assets for Figure 5 recomposition."""
+        ablation = results['ablation_results']
+        topo = results.get('manifold_analysis', {}).get('topological_connectivity', {})
+
+        recall_rows = []
+        query_rows = []
+        neighbor_rows = []
+        for case_name, case_payload in ablation.items():
+            for k, v in case_payload.get('recall_scores', {}).items():
+                recall_rows.append({
+                    'case': case_name,
+                    'k': int(k),
+                    'recall': float(v),
+                })
+            detail = case_payload.get('retrieval_detail', {})
+            for row in detail.get('query_summary', []):
+                query_rows.append({'case': case_name, **row})
+            for row in detail.get('neighbor_ranks', []):
+                neighbor_rows.append({'case': case_name, **row})
+
+        if recall_rows:
+            pd.DataFrame(recall_rows).sort_values(['case', 'k']).to_csv(
+                os.path.join(self.output_dir, 'recall_curve_long.csv'),
+                index=False
+            )
+        if query_rows:
+            pd.DataFrame(query_rows).to_csv(
+                os.path.join(self.output_dir, 'rare_query_summary.csv'),
+                index=False
+            )
+        if neighbor_rows:
+            pd.DataFrame(neighbor_rows).to_csv(
+                os.path.join(self.output_dir, 'rare_neighbor_rank_long.csv'),
+                index=False
+            )
+        if topo:
+            pd.DataFrame([topo]).to_csv(
+                os.path.join(self.output_dir, 'topological_connectivity_summary.csv'),
+                index=False
+            )
+
+        json_ready = {
+            'ablation_results': {
+                case_name: {
+                    'recall_scores': case_payload.get('recall_scores', {}),
+                    'retrieval_detail': case_payload.get('retrieval_detail', {}),
+                    'synthesis_enabled': case_payload.get('synthesis_enabled', False),
+                    'synthetic_assets_available': case_payload.get('synthetic_assets_available', False),
+                }
+                for case_name, case_payload in ablation.items()
+            },
+            'manifold_analysis': results.get('manifold_analysis', {}),
+            'data_info': results.get('data_info', {}),
+        }
+        with open(os.path.join(self.output_dir, 'experiment_results.json'), 'w', encoding='utf-8') as f:
+            json.dump(json_ready, f, indent=2, default=self._json_default)
+
+    def generate_results(self, results: Dict[str, Any]) -> None:
+        """Compatibility wrapper used by main.py."""
+        self._save_publication_raw_assets(results)
+
     def setup_experiment(self) -> None:
         self.logger.info("Setting up Mechanism Analysis Experiment")
         self.output_dir = os.path.join("results", "mechanism_analysis")
@@ -149,7 +281,7 @@ class MechanismAnalysisExperiment(BaseExperiment):
                            query_data: sc.AnnData) -> Dict[str, Dict[str, Any]]:
         self.logger.info("Running ablation study...")
         results = {}
-        from src.utils import ConfigManager
+        from cytoneighbor.utils import ConfigManager
         base_model_config = ConfigManager().get_model_params()
         # Disable internal re-preprocessing to prevent double log1p
         base_model_config['preproc'] = 'none'
@@ -178,11 +310,26 @@ class MechanismAnalysisExperiment(BaseExperiment):
                     **synthesis_params)
 
             recall_scores = self.calculate_rare_cell_recall(ref_data, query_data, model)
+            retrieval_detail = self._collect_rare_query_details(ref_data, query_data, model)
+            synth_X, synth_y = model.get_synthetic_data()
+            synthetic_assets_available = bool(
+                case_config.get('synth_enable', False)
+                and synth_X is not None
+                and synth_y is not None
+                and len(synth_X) > 0
+            )
+            if case_config.get('synth_enable', False) and not synthetic_assets_available:
+                self.logger.warning(
+                    f"{case_name} loaded/trained without accessible synthetic bridge assets; "
+                    "retrieval metrics remain valid, but bridge-cell overlays may be unavailable."
+                )
 
             results[case_name] = {
                 'model': model,
                 'recall_scores': recall_scores,
-                'synthesis_enabled': case_config.get('synth_enable', False)
+                'retrieval_detail': retrieval_detail,
+                'synthesis_enabled': case_config.get('synth_enable', False),
+                'synthetic_assets_available': synthetic_assets_available,
             }
         return results
 
@@ -279,8 +426,8 @@ class MechanismAnalysisExperiment(BaseExperiment):
                     n_hits = np.sum(neighbor_labels == self.rare_cell_type)
                     
                     # ==========================================
-                    # [致命逻辑修复]：使用标准的 Recall@K 公式
-                    # 分母永远是 Reference 中的总稀有细胞数，确保单调递增！
+                    # [Critical logic fix] Use standard Recall@K formula
+                    # Denominator is always the total number of rare cells in Reference, ensuring monotonic increase!
                     # ==========================================
                     recall = n_hits / total_rare_in_ref if total_rare_in_ref > 0 else 0.0
                     recalls.append(recall)
@@ -437,7 +584,11 @@ class MechanismAnalysisExperiment(BaseExperiment):
         best_c_a = max(1e-8, recall_data['case_a'][best_k_idx])
         
         improvement = diff_array[best_k_idx] / best_c_a
-        ax.text(0.04, 0.97, f'Max improvement: +{improvement:.1%}(K={best_k_val})',
+        if improvement >= 0:
+            callout = f'Max relative gain: +{improvement:.1%} (K={best_k_val})'
+        else:
+            callout = f'Least relative loss: {improvement:.1%} (K={best_k_val})'
+        ax.text(0.04, 0.97, callout,
                 transform=ax.transAxes, va='top',
                 bbox=dict(facecolor='wheat', alpha=0.45, edgecolor='none'),
                 fontsize=6)
@@ -521,7 +672,7 @@ class MechanismAnalysisExperiment(BaseExperiment):
                         marker='^', rasterized=True, zorder=3,
                         label='Synthetic bridge cells')
             ax2.legend(frameon=False, loc='lower right', markerscale=0.8)
-        ax2.set_title('(B) Cytoneighbor: Structurally\nRepaired Manifold',
+        ax2.set_title('(B) Cytoneighbor with\nGene-CutMix training',
                       fontweight='bold')
         ax2.axis('off')
 
@@ -542,8 +693,8 @@ class MechanismAnalysisExperiment(BaseExperiment):
         cell_text = [
             [f"{v:.1%}" for v in c_a],
             [f"{v:.1%}" for v in c_b],
-            [f"+{v:.1%}" for v in diff],
-            [f"{v:.1f}\u00d7" if v > 2.0 else f"+{v:.1%}" for v in rel],
+            [f"{v:+.1%}" for v in diff],
+            [f"{v:+.1%}" for v in rel],
         ]
 
         n_cols = len(cols)
@@ -589,26 +740,20 @@ class MechanismAnalysisExperiment(BaseExperiment):
         self.generate_visualizations(ablation_results, ref_data)
 
         results = {
-            'ablation_results': {
-                k: {
-                    'recall_scores': v['recall_scores'],
-                    'synthesis_enabled': v['synthesis_enabled']
-                }
-                for k, v in ablation_results.items()
-            },
+            'ablation_results': ablation_results,
             'manifold_analysis': manifold_analysis,
             'data_info': {
                 'original': len(orig_data),
                 'reference': len(ref_data),
                 'query': len(query_data),
-                'rare_cell_type': self.rare_cell_type,   # ← 补充
+                'rare_cell_type': self.rare_cell_type,   # append
             }
         }
-        self._generate_summary_report(results)   # ← 补充这一行
+        self._generate_summary_report(results)   # append this line
         return results
 
     # def generate_results(self, results: Dict[str, Any]) -> None:
-    #     from src.utils import save_results
+    #     from cytoneighbor.utils import save_results
     #     save_results(results, os.path.join(self.output_dir, 'experiment_results.json'))
 
     #     with open(os.path.join(self.output_dir, 'summary_report.txt'), 'w') as f:
@@ -657,9 +802,19 @@ class MechanismAnalysisExperiment(BaseExperiment):
                 rb = case_b_recalls.get(k_str, 0.0)
                 rel_imp = ((rb - ra) / ra * 100) if ra > 0 else 0.0
                 f.write(f"Recall@{k:<4} | {ra:>18.2%} | {rb:>20.2%} | +{rel_imp:>14.1f}%\n")
-                
-            f.write("\n* Interpretation: Gene-CutMix robustly amplifies the retrieval yield across\n")
-            f.write("  the entire neighborhood spectrum, successfully bridging the manifold gaps.\n\n")
+
+            deltas = [case_b_recalls.get(str(k), 0.0) - case_a_recalls.get(str(k), 0.0)
+                      for k in self.recall_k_values]
+            if all(d >= 0 for d in deltas):
+                f.write("\n* Interpretation: under this run, Gene-CutMix was associated with equal or\n")
+                f.write("  higher retrieval yield across the evaluated neighborhood range.\n\n")
+            elif all(d <= 0 for d in deltas):
+                f.write("\n* Interpretation: under this run, Gene-CutMix was associated with lower\n")
+                f.write("  retrieval yield across the evaluated neighborhood range and should be\n")
+                f.write("  interpreted cautiously before being used for manuscript figures.\n\n")
+            else:
+                f.write("\n* Interpretation: under this run, Gene-CutMix showed mixed retrieval effects\n")
+                f.write("  across neighborhood sizes rather than a uniform gain.\n\n")
 
             f.write("[3. TOPOLOGICAL GRAPH CONNECTIVITY]\n")
             f.write("-" * 72 + "\n")
@@ -668,4 +823,5 @@ class MechanismAnalysisExperiment(BaseExperiment):
             f.write(f"Baseline (Case A) Isolated Components: {topo.get('case_a_components_count', 'N/A')}\n")
             f.write(f"Repaired (Case B) Isolated Components: {topo.get('case_b_components_count', 'N/A')}\n")
             f.write(f"Synthetic Anchor Support Injected:     {'Yes' if topo.get('synthetic_cells_added', False) else 'No'}\n")
+            f.write(f"Synthetic Assets Available:            {'Yes' if results['ablation_results']['case_b'].get('synthetic_assets_available', False) else 'No'}\n")
             f.write("========================================================================\n")
