@@ -49,7 +49,7 @@ closely related cell types.
 
 ```bash
 # Clone and install
-git clone https://github.com/cytoneighbor/Cytoneighbor.git
+git clone https://github.com/checce/Cytoneighbor.git
 cd Cytoneighbor
 pip install -e .
 

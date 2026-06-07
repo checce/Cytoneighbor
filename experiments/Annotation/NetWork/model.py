@@ -201,14 +201,14 @@ def load_model(adata: ad.AnnData, filepath: str) -> ad.AnnData:
 
 # ---------------- Environment/Split/ANN ----------------
 # --- Requirement 3: move _ENV_KEYS definition to external user parameter, only read here ---
-# 这个变量的值将在主脚本的 "用户自定义参数" 部分被定义
+# The value of this variable will be defined in the "User-defined parameters" section of the main script.
 
 def _resolve_env(adata: ad.AnnData) -> Tuple[Optional[np.ndarray], Optional[str]]:
     for k in _ENV_KEYS:
         if k in adata.obs.columns:
             _log(f"[Env] Auto-enabling environment key: [{k}]")
             return adata.obs[k].astype(str).fillna("NA").to_numpy(), k
-    _log(f"[Env] No environment keys detected (e.g.  {_ENV_KEYS})， falling back to non-grouped split.")
+    _log(f"[Env] No environment keys detected (e.g. {_ENV_KEYS}), falling back to non-grouped split.")
     return None, None
 
 def _group_split(y: np.ndarray, groups: Optional[np.ndarray], val_ratio: float, random_state: int):
@@ -454,7 +454,7 @@ class SymRelEnc(nn.Module):
         elif self.diff_mode == "symdiv":
             local = self._sym_local_feats(xa, xb)
         else:
-            raise ValueError("diff_mode must be 'abs' 或 'symdiv'")
+            raise ValueError("diff_mode must be 'abs' or 'symdiv'")
         x = _ensure_finite_t(local, clip_abs=1e6)
         with _autocast_cuda(enabled=xa.is_cuda, amp_dtype=amp_dtype):
             z = self.proj(x)
@@ -584,11 +584,11 @@ def _filter_synth_by_ann(S: np.ndarray, cls: int, donor: str, *,
     thr_g = float(gamma) * float(nearest_other.get(key, float("inf")))
     thr = min(thr_a, thr_g)
     if not np.isfinite(thr):
-        # 两者皆 inf：不过滤
+        # Both are inf: no filtering
         return np.ones(S.shape[0], dtype=bool)
     return dist <= thr
 
-# ========== 合成工具（同 donor 同型 Gene-CutMix + 半径/间隔门槛，健壮版） ==========
+# ========== Synthesis tools (same-donor same-type Gene-CutMix + radius/gap threshold, robust version) ==========
 
 def _class_centers_R(R: np.ndarray, y: np.ndarray) -> Dict[int, np.ndarray]:
     centers = {}
@@ -617,7 +617,7 @@ def _safe_parts(parts: Optional[List[slice]], G: int) -> List[slice]:
     if (parts is None) or (not isinstance(parts, (list, tuple))) or (len(parts) == 0):
         k = max(1, min(G-1, G // 2))
         return [slice(0, k), slice(k, G)]
-    # 规范化、合并、裁边
+    # Normalize, merge, and trim
     norm = []
     last_end = 0
     for s in parts:
@@ -629,7 +629,7 @@ def _safe_parts(parts: Optional[List[slice]], G: int) -> List[slice]:
         b = max(0, min(G, b))
         if b <= a:
             continue
-        # e.g. 果与上段衔接不好，先把缺口补齐
+        # e.g. if gap with previous segment, fill the gap first
         if a > last_end:
             norm.append(slice(last_end, a))
         norm.append(slice(a, b))
@@ -638,7 +638,7 @@ def _safe_parts(parts: Optional[List[slice]], G: int) -> List[slice]:
             break
     if last_end < G:
         norm.append(slice(last_end, G))
-    if len(norm) == 0:  # 极端退化
+    if len(norm) == 0:  # Extreme degenerate case
         k = max(1, min(G-1, G // 2))
         norm = [slice(0, k), slice(k, G)]
     return norm
@@ -654,9 +654,9 @@ def _pick_cutmix_parts(G: int,
         a = float(np.clip(a, 0.05, 0.9))
         b = float(np.clip(b, 0.05, 0.9))
         c = float(np.clip(c, 0.05, 0.9))
-        # 归一化到和为 1
+        # Normalize to sum to 1
         s = a + b + c
-        if s <= 0:  # 保险
+        if s <= 0:  # Safety
             a,b,c = 0.33, 0.34, 0.33
         else:
             a, b, c = a/s, b/s, c/s
@@ -692,11 +692,11 @@ def _gene_cutmix_synthesize(X: np.ndarray,
     out = np.zeros(G, np.float32)
     take = min(len(parents), len(parts))
     if take <= 0:
-        # 极端兜底：直接返回第一个父本的拷贝
+        # Extreme fallback: return a copy of the first parent
         return X[parents[0]].astype(np.float32, copy=True)
     for i in range(take):
         out[parts[i]] = X[parents[i], parts[i]]
-    # 未覆盖的边界用最后父本补齐（理论上 _safe_parts 已覆盖，留下保险）
+    # Uncovered boundaries padded with last parent (theoretically covered by _safe_parts, kept as safeguard)
     covered = np.zeros(G, dtype=bool)
     for i in range(take): covered[parts[i]] = True
     if not covered.all():
@@ -713,8 +713,8 @@ def build_synth_pool(
     ratio_range: Tuple[float,float]=(0.35,0.65),
     p_three_parent: float = 0.25,
     parts_three: Tuple[float,float,float]=(0.3,0.4,0.3),
-    alpha: float = 1.0,   # 半径阈值缩放
-    gamma: float = 1.0,   # 最近他类中心间隔缩放
+    alpha: float = 1.0,   # radius threshold scaling
+    gamma: float = 1.0,   # nearest other-class center margin scaling
     random_state: int = 0
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, Dict[str,int]]:
     rng = np.random.RandomState(random_state)
@@ -722,7 +722,7 @@ def build_synth_pool(
     R = _ann_rep(Xr, P_ann)
     G = Xr.shape[1]; y = y_real; donors = donors_real
 
-    # donor/type -> 索引
+    # donor/type -> indices
     dts = defaultdict(list)
     for i in range(len(y)):
         dts[(int(y[i]), str(donors[i]))].append(i)
@@ -738,13 +738,13 @@ def build_synth_pool(
     for (c, d), idx in dts.items():
         n_real = idx.size
         if n_real < 2:
-            continue  # 至少要两个父本
+            continue  # At least two parents required
         goal = int(min(int(round(mult_per_dt * n_real)), int(cap_per_dt)))
         over = int(round(goal * max(1.0, float(overgen_factor))))
         if over <= 0: continue
 
         produced = 0
-        trials = min(over, max(8, n_real * 16))  # 适度尝试次数
+        trials = min(over, max(8, n_real * 16))  # Moderate number of trials
         for _ in range(trials):
             try:
                 parts = _pick_cutmix_parts(G, rng, ratio_range, p_three_parent, parts_three)
@@ -755,7 +755,7 @@ def build_synth_pool(
                 pa = rng.choice(idx, size=k_parents, replace=False)
                 xnew = _gene_cutmix_synthesize(Xr, list(pa), parts_use)
 
-                # R 空间门槛：类半径 + 最近他类间隔
+                # R-space threshold: class radius + nearest other-class center margin
                 rnew = (xnew[None,:] @ P_ann.T).astype(np.float32)
                 rc = centers[c][None,:]
                 dist_c = float(np.linalg.norm(rnew - rc))
@@ -765,7 +765,7 @@ def build_synth_pool(
                 ok = True
                 if not np.isfinite(thr_rad): thr_rad = float('inf')
                 if dist_c > thr_rad: ok = False
-                # 最近他类中心距离
+                # Nearest other-class center distance
                 mind_other = float('inf')
                 for cc, ctr in centers.items():
                     if cc == c: continue
@@ -777,10 +777,10 @@ def build_synth_pool(
                 produced += 1
                 if produced >= goal: break
             except (ValueError, TypeError, RuntimeError):
-                # 任意边界问题：跳过本次，继续尝试
+                # Any boundary issue: skip this attempt and continue
                 continue
 
-        # 若筛完仍不够，放松半径 10% 再补
+        # If still insufficient after filtering, relax radius by 10% and fill
         if produced < goal:
             need = goal - produced
             fill_try = max(need*3, 8)
@@ -829,12 +829,12 @@ def build_synth_pool(
             "cap_per_dt": int(cap_per_dt),
             "alpha": float(alpha),
             "gamma": float(gamma)}
-    _log(f"[Synth] 合成完成：real={info['n_real']} synth={info['n_synth']} aug={info['n_aug']} "
+    _log(f"[Synth] Synthesis complete: real={info['n_real']} synth={info['n_synth']} aug={info['n_aug']} "
          f"(mult_per_dt={mult_per_dt}, cap_per_dt={cap_per_dt}, alpha={alpha}, gamma={gamma})")
     return X_aug, y_aug, d_aug, is_s_aug, info
 
 
-# ---------------- 评估 ----------------
+# ---------------- Evaluation ----------------
 @torch.inference_mode()
 def _eval_pairs(model, X_t, a, b, y, device, batch=2048, amp_dtype: str = "auto"):
     model.eval(); all_y=[]; all_s=[]; tot=0.0; steps=0
@@ -865,7 +865,7 @@ def _eval_pairs(model, X_t, a, b, y, device, batch=2048, amp_dtype: str = "auto"
 
 
 
-# ---------------- 主训练 API（集成“动态数据合成”） ----------------
+# ---------------- Main training API (integrated with "dynamic data synthesis") ----------------
 # def fit(adata: ad.AnnData,
 #         preproc: str = "auto",
 #         validation_split: Union[float,str,None]='auto',
@@ -946,10 +946,10 @@ def _eval_pairs(model, X_t, a, b, y, device, batch=2048, amp_dtype: str = "auto"
 #     _init_store(adata)
 #     z = adata.uns['cytoneighbor']
 #     X_all = z.get('_train_X', None); y_raw = z.get('_train_y', None)
-#     if X_all is None or y_raw is None: raise ValueError("请先 load_data()。")
+#     if X_all is None or y_raw is None: raise ValueError("Please run load_data() first.")
 
 #     feats = list(adata.var_names); z['feature_names'] = feats
-#     _log(f"特征: {len(feats)} genes（v7 不做 HVG/Scaler）")
+#     _log(f"Features: {len(feats)} genes (v7 no HVG/Scaler)")
 
 #     try: torch.set_float32_matmul_precision(str(torch_matmul_precision))
 #     except Exception: pass
@@ -967,22 +967,22 @@ def _eval_pairs(model, X_t, a, b, y, device, batch=2048, amp_dtype: str = "auto"
 #     z['preproc'] = {"mode": str(preproc_mode)}
 #     X_all = _ensure_finite_np(X_all, 1e6)
 
-#     # 划分
+#     # Split
 #     if validation_split == 'auto':
 #         val_ratio = 0.2; no_val = False
 #     elif validation_split in (None, 0, 0.0, 'none'):
 #         no_val = True; val_ratio = 0.0
 #         if monitor == 'dyn_val_auc':
-#             _log("[Warn] monitor='dyn_val_auc' 但无验证集，回退为 'shadow_auc'。"); monitor='shadow_auc'
+#             _log("[Warn] monitor='dyn_val_auc' but no validation set, falling back to 'shadow_auc'."); monitor='shadow_auc'
 #     else:
 #         no_val = False; val_ratio = float(validation_split)
 
 #     if not no_val:
 #         tr_idx, va_idx = _group_split(y_all, donors_all, float(val_ratio), int(random_state))
-#         if tr_idx.size==0 or va_idx.size==0: raise RuntimeError("划分失败：训练或验证为空。")
+#         if tr_idx.size==0 or va_idx.size==0: raise RuntimeError("Split failed: training or validation set is empty.")
 #     else:
 #         tr_idx = np.arange(X_all.shape[0], dtype=np.int64); va_idx = np.array([], np.int64)
-#         _log("[Split] 使用全量训练（无固定验证集）")
+#         _log("[Split] Using full training set (no fixed validation set)")
 
 #     Xtr_real = X_all[tr_idx]; ytr_real = y_all[tr_idx]
 #     Xva = X_all[va_idx] if not no_val else None; yva = y_all[va_idx] if not no_val else None
@@ -1034,7 +1034,7 @@ def _eval_pairs(model, X_t, a, b, y, device, batch=2048, amp_dtype: str = "auto"
 #           'synth': {'enable': bool(synth_enable)}}
 #     best_auc = -np.inf; best_state_cpu = None
 
-#     # 验证对（自适应上限）
+#     # Validation pairs (adaptive upper limit)
 #     def _refresh_val_pairs(epoch:int):
 #         if no_val or Xva is None or Xva.shape[0] < 2:
 #             return None
@@ -1063,7 +1063,7 @@ def _eval_pairs(model, X_t, a, b, y, device, batch=2048, amp_dtype: str = "auto"
 #     a_va = b_va = l_va = None
 #     if (not no_val) and Xva_t is not None:
 #         cur_val = _refresh_val_pairs(epoch=1)
-#         if cur_val is None: raise RuntimeError("验证集过小，无法构造验证对。")
+#         if cur_val is None: raise RuntimeError("Validation set too small to build validation pairs.")
 #         a_va, b_va, l_va = cur_val
 
 #     _log("==================== Training: SymRelEnc (+ Dynamic Gene-CutMix) ====================")
@@ -1080,7 +1080,7 @@ def _eval_pairs(model, X_t, a, b, y, device, batch=2048, amp_dtype: str = "auto"
 #             else: hard_cache[k]=(ids,ttl)
 #         for k in drop: hard_cache.pop(k, None)
 
-#     # ====== 训练循环 ======
+#     # ====== Training loop ======
 #     for ep in range(1, epochs+1):
 #         t0=time.time(); model.train()
 #         if lr_sched=="cosine" and ep <= warmup_epochs:
@@ -1117,7 +1117,7 @@ def _eval_pairs(model, X_t, a, b, y, device, batch=2048, amp_dtype: str = "auto"
 #             return (proto_P, proto_cls)
 #         proto_P, proto_cls = _refresh_prototypes(ep)
 
-#         # 正例：半难（R 空间 0.6–0.9 分位，候选太少时回退）
+#         # Positive: semi-hard (R-space 0.6-0.9 quantile, fallback if too few candidates)
 #         def _pos_semihard(ai: int, rng_e: np.random.RandomState) -> Optional[int]:
 #             cls = int(ytr_aug[ai])
 #             # Candidate: cross-donor same-class -> fallback global same-class
@@ -1143,7 +1143,7 @@ def _eval_pairs(model, X_t, a, b, y, device, batch=2048, amp_dtype: str = "auto"
 #             pool = cand[mask] if mask.any() else cand
 #             return int(rng_e.choice(pool))
 
-#         # 负例：半难（同 donor 异类最近若干），候选太少时兜底
+#         # Negative: semi-hard (same-donor different-class nearest k), fallback if too few candidates
 #         def _neg_semihard(ai: int, rng_e: np.random.RandomState) -> Optional[int]:
 #             cls = int(ytr_aug[ai]); r_ai = Rtr[ai:ai+1]
 #             # Same-donor different-class
@@ -1161,14 +1161,14 @@ def _eval_pairs(model, X_t, a, b, y, device, batch=2048, amp_dtype: str = "auto"
 #             cand = ids[part]
 #             return int(rng_e.choice(cand)) if cand.size>0 else None
 
-#         # 锚点：只用真实
+#         # Anchor: real-only
 #         if anchor_real_only:
 #             real_idx = np.where(is_synth==0)[0]
 #             if real_idx.size == 0: real_idx = np.arange(ytr_aug.size)
 #         else:
 #             real_idx = np.arange(ytr_aug.size)
 
-#         # 训练对数量自适应
+#         # Adaptive training pair count
 #         max_pairs = int(16 * max(1, real_idx.size))
 #         N_pairs_target = int(min(int(train_pairs_per_epoch), max_pairs))
 
@@ -1302,7 +1302,7 @@ def _eval_pairs(model, X_t, a, b, y, device, batch=2048, amp_dtype: str = "auto"
 #         m_rank_now  = float(rank_margin) * warm
 #         m_self_now  = float(self_margin) * warm
 
-#         # 噪声
+#         # Noise
 #         if (noise_on_train and (noise_mode=='feature_jitter') and (noise_sigma0>0)):
 #             frac = min(1.0, ep / max(1, epochs))
 #             sigma_now = float(noise_sigma0) * (math.cos(0.5*math.pi*frac) ** float(noise_gamma))
@@ -1400,7 +1400,7 @@ def _eval_pairs(model, X_t, a, b, y, device, batch=2048, amp_dtype: str = "auto"
 
 #         tr_loss = (lambda_rank*agg['rank'] + lambda_bce*agg['bce'] + lambda_self_rank*agg['self_rank'])/max(1,agg['n'])
 
-#         # ===== Validation / Best save =====
+#         # ===== Validation / Best save / Early stopping =====
 #         if (monitor == 'dyn_val_auc') and (not no_val) and Xva_t is not None:
 #             if (ep==1) or (ep % max(1,int(val_refresh_every)) == 0):
 #                 a_va, b_va, l_va = _refresh_val_pairs(epoch=ep)
@@ -1442,7 +1442,7 @@ def _eval_pairs(model, X_t, a, b, y, device, batch=2048, amp_dtype: str = "auto"
 #         if device.type=='cuda':
 #             torch.cuda.empty_cache()
 
-#     # 收尾：还原/保存最佳
+#     # Finalize: restore/save best
 #     if best_state_cpu is not None:
 #         model.load_state_dict(best_state_cpu, strict=True); z['model']=model
 #         _log(f"Loaded best model (AUC={best_auc:.4f}).")
@@ -1458,7 +1458,7 @@ def _eval_pairs(model, X_t, a, b, y, device, batch=2048, amp_dtype: str = "auto"
 #     return adata
 
 
-# ---------------- 主训练 API（集成“动态数据合成”和“早停功能”） ----------------
+# ---------------- Main training API (integrated with "dynamic data synthesis" and "early stopping") ----------------
 def fit(adata: ad.AnnData,
         preproc: str = "auto",
         validation_split: Union[float,str,None]='auto',
@@ -1535,19 +1535,19 @@ def fit(adata: ad.AnnData,
         batch_size_override: Optional[int] = None,
         save_best_model_path: Optional[str] = None,
         save_ckpt_dir: Optional[str] = None,
-        # --- 新增：早停相关参数 ---
-        early_stopping_patience: Optional[int] = 10,  # 连续N个epoch没提升就停止,设为None则禁用
-        early_stopping_monitor: str = "dyn_val_auc", # 监控的指标,可选'dyn_val_auc','val_auc','val_loss'
-        early_stopping_min_delta: float = 1e-4      # 认为构成“提升”的最小变化量
+        # --- New: early stopping parameters ---
+        early_stopping_patience: Optional[int] = 10,  # Stop after N consecutive epochs without improvement; set to None to disable
+        early_stopping_monitor: str = "dyn_val_auc", # Metric to monitor, options: 'dyn_val_auc', 'val_auc', 'val_loss'
+        early_stopping_min_delta: float = 1e-4      # Minimum change considered as "improvement"
         ) -> ad.AnnData:
 
     _init_store(adata)
     z = adata.uns['cytoneighbor']
     X_all = z.get('_train_X', None); y_raw = z.get('_train_y', None)
-    if X_all is None or y_raw is None: raise ValueError("请先 load_data()。")
+    if X_all is None or y_raw is None: raise ValueError("Please run load_data() first.")
 
     feats = list(adata.var_names); z['feature_names'] = feats
-    _log(f"特征: {len(feats)} genes（v7 不做 HVG/Scaler）")
+    _log(f"Features: {len(feats)} genes (v7 no HVG/Scaler)")
 
     try: torch.set_float32_matmul_precision(str(torch_matmul_precision))
     except Exception: pass
@@ -1565,22 +1565,22 @@ def fit(adata: ad.AnnData,
     z['preproc'] = {"mode": str(preproc_mode)}
     X_all = _ensure_finite_np(X_all, 1e6)
 
-    # 划分
+    # Split
     if validation_split == 'auto':
         val_ratio = 0.2; no_val = False
     elif validation_split in (None, 0, 0.0, 'none'):
         no_val = True; val_ratio = 0.0
         if monitor == 'dyn_val_auc':
-            _log("[Warn] monitor='dyn_val_auc' 但无验证集，回退为 'shadow_auc'。"); monitor='shadow_auc'
+            _log("[Warn] monitor='dyn_val_auc' but no validation set, falling back to 'shadow_auc'."); monitor='shadow_auc'
     else:
         no_val = False; val_ratio = float(validation_split)
 
     if not no_val:
         tr_idx, va_idx = _group_split(y_all, donors_all, float(val_ratio), int(random_state))
-        if tr_idx.size==0 or va_idx.size==0: raise RuntimeError("划分失败：训练或验证为空。")
+        if tr_idx.size==0 or va_idx.size==0: raise RuntimeError("Split failed: training or validation set is empty.")
     else:
         tr_idx = np.arange(X_all.shape[0], dtype=np.int64); va_idx = np.array([], np.int64)
-        _log("[Split] 使用全量训练（无固定验证集）")
+        _log("[Split] Using full training set (no fixed validation set)")
 
     Xtr_real = X_all[tr_idx]; ytr_real = y_all[tr_idx]
     Xva = X_all[va_idx] if not no_val else None; yva = y_all[va_idx] if not no_val else None
@@ -1632,18 +1632,18 @@ def fit(adata: ad.AnnData,
           'synth': {'enable': bool(synth_enable)}}
     best_auc = -np.inf; best_state_cpu = None
 
-    # --- 新增：早停状态初始化 ---
+    # --- New: early stopping state initialization ---
     patience_counter = 0
-    # e.g. 果监控的是损失，初始最佳值应设为无穷大
+    # e.g. if monitoring loss, initial best value should be set to infinity
     best_metric_for_es = -np.inf if "auc" in early_stopping_monitor else np.inf
-    # e.g. 果没有验证集，则禁用早停
+    # e.g. if no validation set, disable early stopping
     if no_val and early_stopping_patience is not None:
-        _log("[Warn] 没有验证集，早停功能已自动禁用。")
+        _log("[Warn] No validation set, early stopping automatically disabled.")
         early_stopping_patience = None
     # # --- End of additions ---
 
 
-    # 验证对（自适应上限）
+    # Validation pairs (adaptive upper limit)
     def _refresh_val_pairs(epoch:int):
         if no_val or Xva is None or Xva.shape[0] < 2:
             return None
@@ -1672,7 +1672,7 @@ def fit(adata: ad.AnnData,
     a_va = b_va = l_va = None
     if (not no_val) and Xva_t is not None:
         cur_val = _refresh_val_pairs(epoch=1)
-        if cur_val is None: raise RuntimeError("验证集过小，无法构造验证对。")
+        if cur_val is None: raise RuntimeError("Validation set too small to build validation pairs.")
         a_va, b_va, l_va = cur_val
 
     _log("==================== Training: SymRelEnc (+ Dynamic Gene-CutMix) ====================")
@@ -1689,7 +1689,7 @@ def fit(adata: ad.AnnData,
             else: hard_cache[k]=(ids,ttl)
         for k in drop: hard_cache.pop(k, None)
 
-    # ====== 训练循环 ======
+    # ====== Training loop ======
     for ep in range(1, epochs+1):
         t0=time.time(); model.train()
         if lr_sched=="cosine" and ep <= warmup_epochs:
@@ -1726,7 +1726,7 @@ def fit(adata: ad.AnnData,
             return (proto_P, proto_cls)
         proto_P, proto_cls = _refresh_prototypes(ep)
 
-        # 正例：半难（R 空间 0.6–0.9 分位，候选太少时回退）
+        # Positive: semi-hard (R-space 0.6-0.9 quantile, fallback if too few candidates)
         def _pos_semihard(ai: int, rng_e: np.random.RandomState) -> Optional[int]:
             cls = int(ytr_aug[ai])
             # Candidate: cross-donor same-class -> fallback global same-class
@@ -1752,7 +1752,7 @@ def fit(adata: ad.AnnData,
             pool = cand[mask] if mask.any() else cand
             return int(rng_e.choice(pool))
 
-        # 负例：半难（同 donor 异类最近若干），候选太少时兜底
+        # Negative: semi-hard (same-donor different-class nearest k), fallback if too few candidates
         def _neg_semihard(ai: int, rng_e: np.random.RandomState) -> Optional[int]:
             cls = int(ytr_aug[ai]); r_ai = Rtr[ai:ai+1]
             # Same-donor different-class
@@ -1770,14 +1770,14 @@ def fit(adata: ad.AnnData,
             cand = ids[part]
             return int(rng_e.choice(cand)) if cand.size>0 else None
 
-        # 锚点：只用真实
+        # Anchor: real-only
         if anchor_real_only:
             real_idx = np.where(is_synth==0)[0]
             if real_idx.size == 0: real_idx = np.arange(ytr_aug.size)
         else:
             real_idx = np.arange(ytr_aug.size)
 
-        # 训练对数量自适应
+        # Adaptive training pair count
         max_pairs = int(16 * max(1, real_idx.size))
         N_pairs_target = int(min(int(train_pairs_per_epoch), max_pairs))
 
@@ -1911,7 +1911,7 @@ def fit(adata: ad.AnnData,
         m_rank_now  = float(rank_margin) * warm
         m_self_now  = float(self_margin) * warm
 
-        # 噪声
+        # Noise
         if (noise_on_train and (noise_mode=='feature_jitter') and (noise_sigma0>0)):
             frac = min(1.0, ep / max(1, epochs))
             sigma_now = float(noise_sigma0) * (math.cos(0.5*math.pi*frac) ** float(noise_gamma))
@@ -2009,8 +2009,8 @@ def fit(adata: ad.AnnData,
 
         tr_loss = (lambda_rank*agg['rank'] + lambda_bce*agg['bce'] + lambda_self_rank*agg['self_rank'])/max(1,agg['n'])
 
-        # ===== 验证 / Best 保存 / 早停 =====
-        # 初始化本轮用于监控的指标值
+        # ===== Validation / Best save / Early stopping =====
+        # Initialize monitoring metric value for this round
         current_mon_metric = -np.inf if "auc" in early_stopping_monitor else np.inf
 
         if (monitor == 'dyn_val_auc') and (not no_val) and Xva_t is not None:
@@ -2056,14 +2056,14 @@ def fit(adata: ad.AnnData,
         hist['loss_self_rank'].append(agg['self_rank']/max(1,agg['n']))
         hist['triplet_active_ratio'].append(agg['tri_active']/max(1,agg['n']))
         
-        # --- 新增：执行早停检查 ---
+        # --- New: early stopping check ---
         if early_stopping_patience is not None:
             improved = False
-            # 判断指标是否改善（AUC越大越好，Loss越小越好）
+            # Determine if metric improved (AUC higher is better, Loss lower is better)
             if "auc" in early_stopping_monitor:
                 if current_mon_metric > best_metric_for_es + early_stopping_min_delta:
                     improved = True
-            else: # 监控的是loss
+            else: # monitoring loss
                 if current_mon_metric < best_metric_for_es - early_stopping_min_delta:
                     improved = True
             
@@ -2077,7 +2077,7 @@ def fit(adata: ad.AnnData,
 
             if patience_counter >= early_stopping_patience:
                 _log(f"--- Early stopping triggered after {ep} epochs. ---")
-                break # 提前跳出训练循环
+                break # Break out of training loop early
         # # --- End of additions ---
 
         if lr_sched == "cosine":
@@ -2088,7 +2088,7 @@ def fit(adata: ad.AnnData,
         if device.type=='cuda':
             torch.cuda.empty_cache()
 
-    # 收尾：还原/保存最佳
+    # Finalize: restore/save best
     if best_state_cpu is not None:
         model.load_state_dict(best_state_cpu, strict=True); z['model']=model
         _log(f"Loaded best model (AUC={best_auc:.4f}).")
@@ -2107,7 +2107,7 @@ def fit(adata: ad.AnnData,
 
 
 
-# ---------------- transform（召回+重排） ----------------
+# ---------------- transform (retrieval + reranking) ----------------
 def _weights_from_dist(dist: np.ndarray, mode: str="softmax", temperature: float=1.0) -> np.ndarray:
     if mode == "softmax":
         tau = (np.median(dist, axis=1, keepdims=True) + 1e-6) * float(temperature)
@@ -2124,13 +2124,13 @@ def _write_neighbors(adata_out: ad.AnnData, idx: np.ndarray, dist: np.ndarray,
                      neighbors_key="neighbors", random_state=0):
     n = adata_out.n_obs; assert idx.shape == dist.shape
     if (idx < 0).any():
-        raise ValueError("knn 索引包含负数。")
+        raise ValueError("KNN indices contain negative values.")
     for i in range(n):
         row = idx[i]; drow = dist[i]
         mask = (row != i)
         if not mask.all():
             row2 = row[mask]; d2 = drow[mask]
-            if row2.size == 0: raise RuntimeError("KNN 行为空。")
+            if row2.size == 0: raise RuntimeError("KNN row is empty.")
             take = min(len(row2), len(row))
             pad_ids = row2[-1] * np.ones(len(row)-take, dtype=np.int64)
             pad_ds  = np.full(len(row)-take, float(d2[-1] if d2.size>0 else 1.0), dtype=np.float32)
@@ -2186,9 +2186,9 @@ def transform(adata: ad.AnnData,
     feats: List[str] = z.get('feature_names', None)
     ann = z.get('ann', {})
     if model is None or feats is None:
-        raise ValueError("请先加载/训练模型。")
+        raise ValueError("Please load/train the model first.")
     if ann.get("P_ann", None) is None:
-        raise RuntimeError("缺少 ANN 投影矩阵。")
+        raise RuntimeError("Missing ANN projection matrix.")
     device = torch.device("cuda" if (use_cuda and torch.cuda.is_available()) else "cpu")
 
     def _align_features(adata_like: ad.AnnData, feats: List[str], verbose=True) -> np.ndarray:
@@ -2200,7 +2200,7 @@ def transform(adata: ad.AnnData,
             if sp.issparse(X): out[:, present] = X[:, idx[present]].toarray().astype(np.float32)
             else: out[:, present] = np.asarray(X)[:, idx[present]].astype(np.float32)
         miss_cnt = int((~present).sum())
-        if miss_cnt and verbose: _log(f"[Align] Missing {miss_cnt}  features -> zero-filled.")
+        if miss_cnt and verbose: _log(f"[Align] Missing {miss_cnt} features -> zero-filled.")
         return out
 
     X = _align_features(ad_out, feats, verbose=True)
@@ -2208,7 +2208,7 @@ def transform(adata: ad.AnnData,
     X = _apply_value_preproc_np(X, preproc_mode)
     X = _ensure_finite_np(X, clip_abs=1e6)
     N, G = X.shape
-    if N <= 1: raise RuntimeError("transform: 数据集只有一个细胞，无法构图。")
+    if N <= 1: raise RuntimeError("transform: dataset contains only one cell, cannot construct graph.")
 
     P_ann = ann["P_ann"].astype(np.float32)
     R = _ann_rep(X, P_ann)
@@ -2225,7 +2225,7 @@ def transform(adata: ad.AnnData,
 
     I = _faiss_search(index, R, k_candidate + 1)
 
-    # 距离映射
+    # Distance mapping
     def _logits_to_dist_np(z: np.ndarray) -> np.ndarray:
         if dist_from == "logit_softplus":
             az = np.abs(z, dtype=np.float32)
@@ -2235,7 +2235,7 @@ def transform(adata: ad.AnnData,
             s = 1.0 / (1.0 + np.exp(-z, dtype=np.float32))
             return (1.0 - s).astype(np.float32)
         else:
-            raise ValueError("dist_from 必须是 'logit_softplus' 或 'sigmoid_1minus'。")
+            raise ValueError("dist_from must be 'logit_softplus' or 'sigmoid_1minus'.")
 
     try:
         try:
@@ -2324,7 +2324,7 @@ def transform(adata: ad.AnnData,
                 del xa, logits_rows, logits_np, dist, cand
 
         Kmin = min((len(v) for v in acc_idx if len(v) > 0), default=0)
-        if Kmin <= 0: raise RuntimeError("transform: 候选为空。")
+        if Kmin <= 0: raise RuntimeError("transform: candidates are empty.")
         Kmin = min(Kmin, int(n_neighbors))
 
         knn_idx = np.zeros((N, Kmin), np.int64)
@@ -2369,7 +2369,7 @@ def transform(adata: ad.AnnData,
         except Exception:
             pass
 
-# ---------------- annotate（投票） ----------------
+# ---------------- annotate (voting) ----------------
 @torch.inference_mode()
 def annotate(reference: ad.AnnData, reference_obs_key: str,
              query: ad.AnnData, *,
@@ -2408,7 +2408,7 @@ def annotate(reference: ad.AnnData, reference_obs_key: str,
              store_neighbors: bool = False,
              neighbors_store_key: str = "cytoneighbor_knn"):
     if reference_obs_key not in reference.obs.columns:
-        raise KeyError(f"reference.obs 不包含列 '{reference_obs_key}'")
+        raise KeyError(f"reference.obs does not contain column '{reference_obs_key}'")
 
     def _pick_carrier():
         for A in (query, reference):
@@ -2418,7 +2418,7 @@ def annotate(reference: ad.AnnData, reference_obs_key: str,
         return None
     carrier = _pick_carrier()
     if carrier is None:
-        raise RuntimeError("annotate: 未找到已加载的模型。请先在 reference 或 query 上 load_model() 或 fit()。")
+        raise RuntimeError("annotate: No loaded model found. Please run load_model() or fit() on reference or query first.")
 
     z = carrier.uns['cytoneighbor']
     model: SymRelEnc = z['model']
@@ -2437,7 +2437,7 @@ def annotate(reference: ad.AnnData, reference_obs_key: str,
             if sp.issparse(X): out[:, present] = X[:, idx[present]].toarray().astype(np.float32)
             else: out[:, present] = np.asarray(X)[:, idx[present]].astype(np.float32)
         miss_cnt = int((~present).sum())
-        if miss_cnt and verbose: _log(f"[Align] Missing {miss_cnt}  features -> zero-filled.")
+        if miss_cnt and verbose: _log(f"[Align] Missing {miss_cnt} features -> zero-filled.")
         return out
 
     X_ref = _align_features(reference, feats, verbose=False)
@@ -2450,7 +2450,7 @@ def annotate(reference: ad.AnnData, reference_obs_key: str,
 
     nR, nQ = X_ref.shape[0], X_qry.shape[0]
     if nR < 2 or nQ < 1:
-        raise RuntimeError("annotate: 参考集或查询集不足。")
+        raise RuntimeError("annotate: reference or query set insufficient.")
 
     ref_lab_raw = reference.obs[reference_obs_key].astype(str).fillna("NA").to_numpy()
     classes = pd.Index(pd.Series(ref_lab_raw).astype('category').cat.categories)
@@ -2459,7 +2459,7 @@ def annotate(reference: ad.AnnData, reference_obs_key: str,
     C = len(classes)
     _log(f"[Annotate] reference cells={nR}, classes={C}, query cells={nQ}")
 
-    # 召回
+    # Retrieval
     R_ref = _ann_rep(X_ref, P_ann)
     index = _faiss_hnsw_build(R_ref)
     if k_search is None:
@@ -2475,7 +2475,7 @@ def annotate(reference: ad.AnnData, reference_obs_key: str,
             a = max(1e-6, float(power_alpha))
             return (np.clip(sim, 0.0, 1.0) ** a) / max(1e-6, float(temperature))
         else:
-            raise ValueError("score_mode 必须是 'logit' | 'sim' | 'power'。")
+            raise ValueError("score_mode must be 'logit' | 'sim' | 'power'.")
 
     def _stabilize_logits(z: np.ndarray) -> np.ndarray:
         if clip_logits_quantile is None: return z
@@ -2620,5 +2620,5 @@ def annotate(reference: ad.AnnData, reference_obs_key: str,
 
     qz = query.uns.setdefault('cytoneighbor', {})
     qz['classes_for_probs'] = list(map(str, classes))
-    _log(f"[Annotate] 写入 obs['{pred_key}'], obs['{pred_pretty_key}'], obs['{conf_key}'], obsm['{proba_key}']；C={C}；Unknown={int(is_unknown.sum())}；efSearch={getattr(index.hnsw,'efSearch',0)}")
+    _log(f"[Annotate] Writing obs['{pred_key}'], obs['{pred_pretty_key}'], obs['{conf_key}'], obsm['{proba_key}']; C={C}; Unknown={int(is_unknown.sum())}; efSearch={getattr(index.hnsw,'efSearch',0)}")
     return query

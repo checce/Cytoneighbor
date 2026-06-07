@@ -10,8 +10,8 @@
     <a href="https://www.python.org/downloads/">
       <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue">
     </a>
-    <a href="https://github.com/cytoneighbor/Cytoneighbor/actions/workflows/tests.yml">
-      <img alt="CI" src="https://github.com/cytoneighbor/Cytoneighbor/actions/workflows/tests.yml/badge.svg">
+    <a href="https://github.com/checce/Cytoneighbor/actions/workflows/tests.yml">
+      <img alt="CI" src="https://github.com/checce/Cytoneighbor/actions/workflows/tests.yml/badge.svg">
     </a>
     <a href="https://opensource.org/licenses/MIT">
       <img alt="License" src="https://img.shields.io/badge/license-MIT-green">
@@ -65,7 +65,7 @@ pip install cytoneighbor
 ### From source (with GPU acceleration)
 
 ```bash
-git clone https://github.com/cytoneighbor/Cytoneighbor.git
+git clone https://github.com/checce/Cytoneighbor.git
 cd Cytoneighbor
 
 # CPU-only (no GPU required)
@@ -369,7 +369,7 @@ Cytoneighbor/
 1. Clone the repository and install with the Conda lock file:
 
 ```bash
-git clone https://github.com/cytoneighbor/Cytoneighbor.git
+git clone https://github.com/checce/Cytoneighbor.git
 cd Cytoneighbor
 conda env create -f repro/locks/environment-smn.yml
 conda activate smn
@@ -496,7 +496,7 @@ We welcome contributions! Please:
 5. Submit a pull request
 
 For bug reports, feature requests, or questions, please
-[open an issue](https://github.com/cytoneighbor/Cytoneighbor/issues).
+[open an issue](https://github.com/checce/Cytoneighbor/issues).
 
 ---
 
@@ -509,5 +509,5 @@ MIT License. See [LICENSE](LICENSE) for full text.
 ## &#128231; Contact
 
 For questions or support:
-- [GitHub Issues](https://github.com/cytoneighbor/Cytoneighbor/issues)
-- Email: XXX@fzu.edu.cn
+- [GitHub Issues](https://github.com/checce/Cytoneighbor/issues)
+- Email: checce@github

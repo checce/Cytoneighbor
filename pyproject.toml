@@ -9,7 +9,7 @@ description = "Neighbour-evidence-guided single-cell state interpretation"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "Huan Hu", email = "XXX@fzu.edu.cn"},
+    {name = "Huan Hu"},
 ]
 keywords = [
     "single-cell",
@@ -53,9 +53,9 @@ integration = ["scvi-tools>=1.0"]
 dev = ["jupyter", "ipykernel", "pytest"]
 
 [project.urls]
-Homepage = "https://github.com/cytoneighbor/Cytoneighbor"
-Repository = "https://github.com/cytoneighbor/Cytoneighbor"
-Documentation = "https://github.com/cytoneighbor/Cytoneighbor"
+Homepage = "https://github.com/checce/Cytoneighbor"
+Repository = "https://github.com/checce/Cytoneighbor"
+Documentation = "https://github.com/checce/Cytoneighbor"
 
 [tool.setuptools.packages.find]
 include = ["cytoneighbor*"]
