@@ -384,17 +384,27 @@ pip install -e .
 ### Running experiments
 
 ```bash
-# Run all experiments
-python main.py run-all
-
-# Run a specific experiment
+# Run individual experiments via CLI
 python main.py run-experiment benchmark-resolution
 python main.py run-experiment mechanism-analysis
 python main.py run-experiment disease-discovery
 
+# LOBO annotation benchmarks (9 baselines + Cytoneighbor)
+python experiments/Annotation/Cytoneighbor.py
+
+# Batch integration benchmarks
+python experiments/Rebatch/a-main_remove.py
+
 # Train a model on your own dataset
 python main.py train --dataset data/your_data.h5ad --cell-type cell_type
 ```
+
+> **Note**: `python main.py run-all` is available but may fail if the
+> spatial-validation experiment module is not present. Run individual
+> experiments for reliable results.
+
+See `experiments/Annotation/` for baseline method scripts (CellTypist,
+scANVI, scArches, SingleR, Seurat, SciBet, and classic ML classifiers).
 
 ### Pre-computed results
 
@@ -412,11 +422,11 @@ Docker and Apptainer recipes are provided in `repro/container/`:
 ```bash
 # Docker
 docker build -t cytoneighbor -f repro/container/Dockerfile.smn .
-docker run --gpus all -it cytoneighbor python main.py run-all
+docker run --gpus all -it cytoneighbor python main.py run-experiment benchmark-resolution
 
 # Apptainer
 apptainer build cytoneighbor.sif repro/container/Apptainer.smn.def
-apptainer run --nv cytoneighbor.sif python main.py run-all
+apptainer run --nv cytoneighbor.sif python main.py run-experiment benchmark-resolution
 ```
 
 ---
