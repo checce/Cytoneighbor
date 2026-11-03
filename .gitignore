@@ -1,4 +1,4 @@
-﻿# --- Python bytecode and packaging ---
+# --- Python bytecode and packaging ---
 __pycache__/
 *.py[cod]
 *.pyo
@@ -66,3 +66,10 @@ paper/*.blg
 paper/*.synctex.gz
 paper/*.fdb_latexmk
 paper/*.fls
+
+# Local-only submissions and research archives
+/bin/
+/Revision1.0/
+/Revision_Workspace/
+/PROJECT_LAYOUT_CN.md
+/data/.download-*/

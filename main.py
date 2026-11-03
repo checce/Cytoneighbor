@@ -103,38 +103,15 @@ def run_disease_discovery(config: Dict[str, Any]) -> None:
     return results
 
 
-def run_spatial_validation(config: Dict[str, Any]) -> None:
-    """Run the spatial validation experiment."""
-    from experiments.spatial_validation import SpatialValidationExperiment
-    from cytoneighbor.utils import DataLoader, MetricsCalculator, VisualizationEngine
-    
-    # Initialize components
-    data_loader = DataLoader()
-    metrics_calc = MetricsCalculator()
-    viz_engine = VisualizationEngine(config.get('visualization', {}))
-    
-    # Get experiment config
-    exp_config = config['experiments']['spatial_validation']
-    
-    # Run experiment
-    experiment = SpatialValidationExperiment(exp_config, data_loader, metrics_calc, viz_engine)
-    experiment.setup_experiment()
-    results = experiment.run_experiment()
-    experiment.generate_results(results)
-    experiment.cleanup()
-    
-    print("Spatial validation experiment completed successfully!")
-
-
 def run_all_experiments(config: Dict[str, Any]) -> None:
     """Run all experiments in sequence."""
     experiments = [
         ("Benchmark Resolution", run_benchmark_resolution),
         ("Mechanism Analysis", run_mechanism_analysis),
         ("Disease Discovery", run_disease_discovery),
-        ("Spatial Validation", run_spatial_validation)
     ]
     
+    failures = []
     for exp_name, exp_func in experiments:
         print(f"\n{'='*60}")
         print(f"Running {exp_name} Experiment")
@@ -185,7 +162,7 @@ Examples:
   python main.py run-experiment benchmark-resolution
   
   # Train a model
-  python main.py train --dataset data/Human_immune.h5ad --cell-type cell_type
+  python main.py train --dataset "data/Human immune.h5ad" --cell-type final_annotation
   
   # Use custom config
   python main.py run-all --config my_config.yaml
@@ -201,7 +178,7 @@ Examples:
     parser.add_argument(
         'experiment',
         nargs='?',
-        choices=['benchmark-resolution', 'mechanism-analysis', 'disease-discovery', 'spatial-validation'],
+        choices=['benchmark-resolution', 'mechanism-analysis', 'disease-discovery'],
         help='Specific experiment to run (for run-experiment command)'
     )
     
@@ -254,7 +231,6 @@ Examples:
                 'benchmark-resolution': run_benchmark_resolution,
                 'mechanism-analysis': run_mechanism_analysis,
                 'disease-discovery': run_disease_discovery,
-                'spatial-validation': run_spatial_validation
             }
             
             experiment_map[args.experiment](config)

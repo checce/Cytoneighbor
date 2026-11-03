@@ -50,7 +50,7 @@ dependencies = [
 [project.optional-dependencies]
 gpu = ["faiss-gpu>=1.7"]
 integration = ["scvi-tools>=1.0"]
-dev = ["jupyter", "ipykernel", "pytest"]
+dev = ["jupyter", "ipykernel", "pytest", "leidenalg"]
 
 [project.urls]
 Homepage = "https://github.com/checce/Cytoneighbor"

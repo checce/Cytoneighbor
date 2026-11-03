@@ -39,7 +39,7 @@ closely related cell types.
 ## Prerequisites
 
 - Python 3.10 or later
-- Cytoneighbor installed (`pip install cytoneighbor`)
+- A source checkout with Cytoneighbor and the tutorial dependencies installed
 - The tutorials use a publicly available immune-cell dataset, or fall back
   to synthetic mock data if the dataset is not found
 
@@ -51,7 +51,7 @@ closely related cell types.
 # Clone and install
 git clone https://github.com/checce/Cytoneighbor.git
 cd Cytoneighbor
-pip install -e .
+python -m pip install -e ".[dev]"
 
 # Launch tutorials
 jupyter notebook tutorials/
@@ -68,7 +68,7 @@ mock data so you can follow along immediately.
 Download the real dataset from
 [Google Drive](https://drive.google.com/drive/folders/11PuJRaw_JC7xJhphQklac7eg9AuGHsCE?usp=sharing).
 
-See `../data/README.md` for the full dataset inventory.
+See the [dataset guide](../data/) for the full inventory.
 
 ---
 
@@ -76,4 +76,4 @@ See `../data/README.md` for the full dataset inventory.
 
 - Read the [API reference](../README.md#-api-at-a-glance) in the main README
 - Run `python tests/test_quick_run.py` to verify your installation
-- Run `python main.py run-all` to reproduce the paper figures
+- Follow the [reproducibility guide](../repro/) to run the original workflows or check the revision tables

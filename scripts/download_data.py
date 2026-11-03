@@ -1,140 +1,107 @@
 #!/usr/bin/env python3
-"""
-Download Cytoneighbor datasets from Google Drive.
-
-This script attempts to download the required .h5ad files using gdown.
-If gdown is unavailable or a file cannot be downloaded automatically,
-it prints manual download instructions.
-
-Usage:
-    python scripts/download_data.py          # download all datasets
-    python scripts/download_data.py --list   # list datasets only
-"""
-
-import os
-import sys
+"""Download the study's AnnData inputs from the public dataset folder."""
 import argparse
+import csv
+import hashlib
 from pathlib import Path
+import tempfile
 
-# ---------------------------------------------------------------------------
-# Dataset registry:  { filename: google_drive_file_id }
-# Replace the placeholder IDs with actual Google Drive file IDs.
-# To obtain a file ID, right-click the file in Google Drive and select
-# "Get link" -> the ID is the string after "/d/" and before "/view".
-# ---------------------------------------------------------------------------
-DATASETS = {
-    "Human immune.h5ad":             "PASTE_FILE_ID_HERE",
-    "Pancreas.h5ad":                 "PASTE_FILE_ID_HERE",
-    "Diabetic Kidney Disease.h5ad":  "PASTE_FILE_ID_HERE",
-    "Lung_atlas_public.h5ad":        "PASTE_FILE_ID_HERE",
-    "Mouse_Kidney_mod1.h5ad":        "PASTE_FILE_ID_HERE",
-    "Zebrafish embryonic cells.h5ad":"PASTE_FILE_ID_HERE",
+DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+FOLDER = "https://drive.google.com/drive/folders/11PuJRaw_JC7xJhphQklac7eg9AuGHsCE"
+FILE_IDS = {
+    "Human immune.h5ad": "1s-nOAlrCboVoDQAJLyosBWLK5CqY3NOb",
+    "Pancreas.h5ad": "1sQZ3gTouSTuuSRM8OnIDKdMxTVP63s3l",
+    "Diabetic Kidney Disease.h5ad": "1C4gCWUUtmQaGibCGA7r8x9HJn854nW8W",
+    "Lung_atlas_public.h5ad": "1EBGy-iHVdbn2BVoIKFAWq1PsyHV7tKsl",
+    "Mouse_Kidney_mod1.h5ad": "1YfYDIvK_P8FVv5BkZEKCgODAkW_6TQKg",
+    "8d2e51ab-0edd-46c8-bdac-558de319d6c2_sample_id_7_donor_id_6.h5ad": "1pG-E9uqRfq0BFXXbeN0_whZP-OOBHBCi",
+    "Zebrafish embryonic cells.h5ad": None,
 }
 
-GOOGLE_DRIVE_FOLDER = "https://drive.google.com/drive/folders/11PuJRaw_JC7xJhphQklac7eg9AuGHsCE?usp=sharing"
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
-
-
-def list_datasets():
-    """Print the dataset inventory."""
-    print("\nCytoneighbor Datasets")
-    print("=" * 60)
-    print(f"Google Drive: {GOOGLE_DRIVE_FOLDER}\n")
-    for fname, fid in DATASETS.items():
-        status = "READY" if (DATA_DIR / fname).exists() else "MISSING"
-        print(f"  [{status:7s}] {fname}")
-    print()
+def fingerprint(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(2**20), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
-def download_with_gdown(fname, file_id, quiet=False):
-    """Download a single file using gdown."""
+def download(name, expected):
+    destination = DATA_DIR / name
+    if destination.is_file():
+        print(f"Exists: {name}. Use --verify to compare it with the study input.")
+        return True
+    if FILE_IDS[name] is None:
+        print(f"No public file is linked for {name}. See data/README.md.")
+        return False
     try:
         import gdown
     except ImportError:
-        print("  [!] gdown not installed. Run: pip install gdown")
+        print("Install gdown with python -m pip install gdown, or download manually.")
         return False
 
-    dest = DATA_DIR / fname
-    if dest.exists():
-        print(f"  [SKIP] {fname} already exists ({dest.stat().st_size / 1e6:.1f} MB)")
-        return True
-
-    url = f"https://drive.google.com/uc?id={file_id}"
-    print(f"  [->] Downloading {fname} ...")
-    try:
-        gdown.download(url, str(dest), quiet=quiet)
-        if dest.exists():
-            print(f"  [OK]  {fname} ({dest.stat().st_size / 1e6:.1f} MB)")
-            return True
-    except Exception as e:
-        print(f"  [FAIL] {fname}: {e}")
-
-    return False
+    # Check the input before putting it at the path consumed by experiments.
+    with tempfile.TemporaryDirectory(prefix=".download-", dir=DATA_DIR) as temp:
+        partial = Path(temp) / name
+        try:
+            gdown.download(id=FILE_IDS[name], output=str(partial))
+            if (not partial.is_file()
+                    or partial.stat().st_size != int(expected["Bytes"])
+                    or fingerprint(partial) != expected["SHA256"]):
+                print(f"Download did not match the study checksum: {name}")
+                return False
+            if destination.exists():
+                print(f"A file appeared at {destination} during download. Verify it before use.")
+                return False
+            partial.rename(destination)
+        except Exception as exc:
+            print(f"Could not download {name}: {exc}")
+            return False
+    print(f"Downloaded and verified {name}")
+    return True
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Download Cytoneighbor datasets")
-    parser.add_argument("--list", action="store_true", help="List datasets only")
-    parser.add_argument("--file", type=str, help="Download a specific file by name")
+    parser = argparse.ArgumentParser(description=__doc__)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--list", action="store_true", help="Show local and public availability")
+    mode.add_argument("--verify", action="store_true", help="Verify local files by SHA-256")
+    parser.add_argument("--file", choices=FILE_IDS, help="Use a single exact filename")
     args = parser.parse_args()
-
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-
+    names = [args.file] if args.file else list(FILE_IDS)
+    print(f"Dataset folder: {FOLDER}\n")
     if args.list:
-        list_datasets()
-        return
+        for name in names:
+            local = "present" if (DATA_DIR / name).is_file() else "missing"
+            public = "linked" if FILE_IDS[name] else "not linked"
+            print(f"{name}: {local} locally, {public} on Drive")
+        return 0
 
-    # Check if any file IDs are still placeholders
-    all_placeholders = all(fid == "PASTE_FILE_ID_HERE" for fid in DATASETS.values())
-    if all_placeholders:
-        print("=" * 60)
-        print("  Google Drive file IDs have not been configured yet.")
-        print("  Please edit scripts/download_data.py and replace")
-        print("  'PASTE_FILE_ID_HERE' with actual Google Drive file IDs.")
-        print("=" * 60)
-        print()
-        print(f"  Folder: {GOOGLE_DRIVE_FOLDER}")
-        print()
-        print("  To obtain file IDs:")
-        print("    1. Open the Google Drive folder")
-        print("    2. Right-click each file -> 'Get link' -> 'Copy link'")
-        print("    3. The ID is between '/d/' and '/view' in the URL")
-        print()
-        print("  Alternatively, download files manually and place them in:")
-        print(f"    {DATA_DIR.resolve()}")
-        print()
-        list_datasets()
-        return
+    with (DATA_DIR / "input-checksums.csv").open(encoding="utf-8-sig", newline="") as stream:
+        checksums = {row["Filename"]: row for row in csv.DictReader(stream)}
+    if args.verify:
+        ok = True
+        for name in names:
+            path = DATA_DIR / name
+            expected = checksums[name]
+            matches = (path.is_file() and path.stat().st_size == int(expected["Bytes"])
+                       and fingerprint(path) == expected["SHA256"])
+            print(f"{'OK' if matches else 'Missing or different'}: {name}")
+            ok &= matches
+        return 0 if ok else 1
 
-    if args.file:
-        if args.file not in DATASETS:
-            print(f"Unknown dataset: {args.file}")
-            print(f"Available: {list(DATASETS.keys())}")
-            sys.exit(1)
-        targets = {args.file: DATASETS[args.file]}
-    else:
-        targets = DATASETS
-
-    print("\nDownloading Cytoneighbor datasets ...")
-    print(f"Target directory: {DATA_DIR.resolve()}\n")
-
-    success = 0
-    for fname, fid in targets.items():
-        if download_with_gdown(fname, fid):
-            success += 1
-
-    print(f"\nDone: {success}/{len(targets)} datasets ready.\n")
-
-    # Remind about remaining files
-    missing = [f for f in targets if not (DATA_DIR / f).exists()]
-    if missing:
-        print("The following files could not be downloaded automatically:")
-        for f in missing:
-            print(f"  - {f}")
-        print(f"\nPlease download them manually from:\n  {GOOGLE_DRIVE_FOLDER}")
-        print(f"and place them in:\n  {DATA_DIR.resolve()}\n")
+    # The default action downloads the currently linked files.
+    if args.file is None:
+        missing_links = [name for name in names if FILE_IDS[name] is None]
+        if missing_links:
+            print("No public download link for: " + ", ".join(missing_links))
+        names = [name for name in names if FILE_IDS[name]]
+    results = [download(name, checksums[name]) for name in names]
+    if not all(results):
+        print(f"See data/README.md for manual download instructions and expected checksums.")
+    return 0 if all(results) else 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

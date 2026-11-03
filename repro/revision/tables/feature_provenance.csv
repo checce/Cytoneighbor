@@ -1,0 +1,5 @@
+﻿experiment,method,feature_matrix,n_features,forced_markers,evidence
+integration benchmark (Table 1 / Fig 3),"ALL (Unintegrated, Harmony, scVI, BBKNN, Cytoneighbor)",one shared matrix,3000,none,"a-main_remove.py: sc.pp.highly_variable_genes(n_top_genes=3000, batch_key=BATCH); the same adata_hvg copy is used by every method"
+annotation folds (CV_Perfomace LOBO),Cytoneighbor,per-fold matrix from the 9 reference batches,3000,none,"Annotation/Cytoneighbor.py: sc.pp.highly_variable_genes(ref, n_top_genes=3000, flavor='seurat')"
+annotation folds (CV_Perfomace LOBO),baselines + scANVI/SingleR/celltypist/Seurat/scibet,their own pipelines (varies by method),,method-specific,each baseline script performs its own preprocessing; not a single shared matrix
+NK/NKT resolution stress test (Fig 3d/3e),"ALL (Cytoneighbor, scVI, Seurat, Harmony)",one shared subsetted lymphocyte matrix,1319,"15 (CD4, CD8A, CD8B, CD3D, CD3E, CD3G, NCAM1, KLRD1, FCGR3A, IL7R, CCR7, S100A4, FOXP3, GZMB, PRF1)","benchmark_resolution.py: HVG(min_mean=0.0125,max_mean=3,min_disp=0.5) then var.loc[available_markers,'highly_variable']=True before subsetting; all methods use the same subset"

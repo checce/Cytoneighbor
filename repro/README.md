@@ -1,14 +1,24 @@
 # Reproducibility Assets
 
-This directory centralizes submission-grade reproducibility metadata:
+Start with the workflow that matches your goal.
 
-- `qc_threshold_manifest.csv`: script-level preprocessing and QC thresholds with source anchors.
-- `repro_manifest.csv` / `repro_manifest.json`: package pins, lock hashes, container recipe hashes, and git freeze metadata.
-- `generate_statistical_assets.py`: consolidates manuscript-aligned statistics assets for annotation, integration, mechanism and DKD targeted summaries.
-- `statistics/`: machine-readable statistics tables cited by the manuscript and Supplementary.
-- `locks/`: exact environment snapshots (`conda --explicit`, `conda list`, `pip freeze`, `R session`, runtime string).
-- `container/`: Docker and Apptainer recipes that reconstruct the `smn` environment from lock files.
+| Goal | Start here |
+| --- | --- |
+| Try Cytoneighbor without study data | Run `python tests/test_quick_run.py` or open the [tutorials](../tutorials/). |
+| Inspect the revision comparisons | Open the [revision evidence](revision/). Run `python repro/revision/check_summaries.py` to check the frozen tables without models or study data. |
+| Run the original experiments | Get the [study inputs](../data/) and use the commands in the [main README](../README.md#-reproducing-the-paper). The [results archive](../results/) documents the original checkpoints and figure outputs. |
 
-The intended repository freeze tag for submission is:
+`configs/config.yaml` contains the default experiment settings.
+[qc_threshold_manifest.csv](qc_threshold_manifest.csv) records preprocessing
+and thresholds with source anchors. [statistics/](statistics/) contains the
+original statistical summaries. Their generation script reads the original
+saved outputs, so populate the required result folders first.
 
-- `submission-v1-freeze`
+[locks/](locks/) and [container/](container/) record the historical `smn`
+environment and build recipes. The exact locks include platform-specific
+packages. For everyday use, install from source in a fresh environment as
+shown in the main README. R baselines also require the relevant R packages.
+
+The historical submission snapshot is identified as `submission-v1-freeze`
+in the recorded environment manifest. The revision tables have their own
+[manifest](revision/manifest.csv) and checksums.

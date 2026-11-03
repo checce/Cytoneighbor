@@ -1,0 +1,17 @@
+﻿metric,value,task
+n,33506,known-type error screening; pooled cells
+wrong,4882,known-type error screening; pooled cells
+rejected,2911,known-type error screening; pooled cells
+wrong_rejected,1405,known-type error screening; pooled cells
+correct_rejected,1506,known-type error screening; pooled cells
+coverage,0.9131200382021131,known-type error screening; pooled cells
+error_interception_fraction,0.2877918885702581,known-type error screening; pooled cells
+all_accuracy_without_rejection,0.8542947531785352,known-type error screening; pooled cells
+retained_accuracy,0.8863539794084001,known-type error screening; pooled cells
+all_accuracy_rejected_count_wrong,0.8093475795379932,known-type error screening; pooled cells
+wrong_fraction_in_rejected,0.48265200961868776,known-type error screening; pooled cells
+foldmatched_random_expected_wrong,557.4366492063187,known-type error screening; pooled cells
+foldmatched_enrichment,2.5204657820766654,known-type error screening; pooled cells
+unique_similarity_rejected,467,known-type error screening; pooled cells
+unique_similarity_wrong,210,known-type error screening; pooled cells
+unique_similarity_correct,257,known-type error screening; pooled cells

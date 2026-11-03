@@ -1,12 +1,9 @@
-﻿<p align="center">
+<p align="center">
   <h1 align="center">&#128300; Cytoneighbor</h1>
   <p align="center">
     <strong>Neighbour-evidence-guided single-cell state interpretation</strong>
   </p>
   <p align="center">
-    <a href="https://pypi.org/project/cytoneighbor">
-      <img alt="PyPI" src="https://img.shields.io/badge/pypi-v0.1.0-blue">
-    </a>
     <a href="https://www.python.org/downloads/">
       <img alt="Python" src="https://img.shields.io/badge/python-3.10%2B-blue">
     </a>
@@ -19,27 +16,28 @@
   </p>
 </p>
 
+[Get started](#-installation) · [Tutorials](tutorials/) · [Download data](data/) · [Reproduce the study](repro/)
+
 ---
 
 ## &#128269; What is Cytoneighbor?
 
 **Cytoneighbor** is a neighbour-evidence framework for interpretable single-cell
-state analysis. Rather than returning a single label or UMAP coordinate and
-hoping it is correct, Cytoneighbor constructs a **ranked neighbour list** for
-every query cell and provides **diagnostic readouts** that reveal *whether* the
-evidence supports the biological interpretation — and *why*.
+state analysis. Cytoneighbor constructs a **ranked neighbour list** for every query cell.
+Inspect the supporting neighbours and scores to see where a label or a graph
+has strong evidence and where it needs closer review.
 
 The framework combines three core components:
 
-- **Scalable candidate retrieval** with FAISS HNSW for fast nearest-neighbour search across millions of cells
+- **Scalable candidate retrieval** with FAISS HNSW to shortlist candidates before neural scoring. The revision reports measured resource use up to 100,000 cells in a single PBMC workload
 - **Exact pairwise re-scoring** via a **Symmetric Relation Encoder (SymRelEnc)** that learns discriminative cell-pair relationships
-- **Gene-CutMix**, a training-time data augmentation strategy that strengthens rare-population signals in sparse expression regions
+- **Gene-CutMix**, a training-time augmentation strategy evaluated under a controlled pancreatic delta-cell scarcity protocol
 
 Cytoneighbor fits naturally into a standard Scanpy workflow: train a model,
 build a neighbour graph, and then use it as a drop-in replacement for any
 downstream function that accepts a `neighbors_key`.
 
-> &#128214; **Paper**: Hu H. et al. *Inspectable neighbor evidence for single-cell state interpretation with Cytoneighbor* (in preparation).
+> &#128214; **Paper**: Hu H. et al. *Cytoneighbor: a scalable neighbor evidence framework for single-cell state analysis* (in preparation).
 
 ---
 
@@ -47,22 +45,18 @@ downstream function that accepts a `neighbors_key`.
 
 | Your goal | Typical approach | What Cytoneighbor does differently |
 |---|---|---|
-| Annotate cells | Closed-set forced label | **Unknown-gating**: cells with weak evidence remain *Unknown* instead of being misclassified |
-| Integrate batches | Global alignment blurs boundaries | **Boundary-preserving**: related types (e.g. NK and NKT) stay separable after batch correction |
-| Find rare cells | Oversampling or downweighting | **Gene-CutMix**: restores neighbour evidence for rare populations without inflating the reference |
+| Annotate cells | Closed-set forced label | **Unknown-gating**: defer low-evidence calls and inspect the confidence, margin and entropy |
+| Integrate batches | Global alignment blurs boundaries | **Boundary-preserving**: inspect how well neighbourhoods retain related-type boundaries and measure the trade-off with batch mixing |
+| Find rare cells | Oversampling or downweighting | **Gene-CutMix**: test augmentation with real reference cells at inference |
 | Compare disease vs healthy | Pooled-control differential expression | **State-matched**: separates compositional redistribution from within-state expression changes |
 
 ---
 
 ## &#128230; Installation
 
-### Quick install (recommended)
+### From source (recommended)
 
-```bash
-pip install cytoneighbor
-```
-
-### From source (with GPU acceleration)
+Use Python 3.10 or 3.11 in a fresh environment. Run the following from a terminal.
 
 ```bash
 git clone https://github.com/checce/Cytoneighbor.git
@@ -71,23 +65,13 @@ cd Cytoneighbor
 # CPU-only (no GPU required)
 pip install -e .
 
-# With GPU FAISS support
-pip install -e ".[gpu]"
-
-# With integration baseline tools (scVI)
-pip install -e ".[gpu,integration]"
-
 # Development install (includes testing tools)
 pip install -e ".[dev]"
 ```
 
-### Conda environment (exact reproducibility)
-
-```bash
-conda env create -f repro/locks/environment-smn.yml
-conda activate smn
-pip install -e .
-```
+The default FAISS backend is CPU-based. PyTorch can use CUDA on a compatible
+system. See the [recorded environment](repro/locks/) and
+[container notes](repro/container/) for the historical software stack.
 
 ### Verify your installation
 
@@ -130,7 +114,7 @@ result = cn.quick_annotate(ref, "cell_type", qry)
 print(result.obs["cytoneighbor_prediction"].value_counts())
 ```
 
-> **Try it now** — no installation required:
+Try the [annotation tutorial](tutorials/tutorial_annotation.ipynb) with synthetic data before downloading a real dataset.
 > ---
 
 ## &#128218; API at a Glance
@@ -143,7 +127,7 @@ result = cn.quick_annotate(ref, "cell_type", query)
 
 # --- Step-by-step for full control ---
 cn.load_data(adata, data=X, labels=labels)    # prepare expression matrix
-cn.fit(adata, label_key="cell_type")           # train SymRelEnc model
+cn.fit(adata)                                 # train SymRelEnc model
 cn.transform(adata, n_neighbors=15)            # build neighbour graph
 cn.annotate(ref, "cell_type", query, enable_unknown=True)  # transfer labels
 
@@ -155,7 +139,7 @@ cn.load_model(adata, "my_model.zip")
 | Function | What it does |
 |---|---|
 | `quick_annotate(ref, label_key, query)` | Train + annotate in one call |
-| `fit(adata, label_key, ...)` | Train the SymRelEnc model on reference data |
+| `fit(adata, ...)` | Train the SymRelEnc model after loading expression and labels |
 | `transform(adata, n_neighbors, ...)` | Build a pairwise-score neighbour graph |
 | `annotate(ref, label_key, query, ...)` | Transfer labels using ranked neighbour evidence |
 | `load_data(adata, data, labels)` | Prepare expression matrix and labels for training |
@@ -180,7 +164,8 @@ ref  = sc.read_h5ad("your_reference.h5ad")
 qry  = sc.read_h5ad("your_query.h5ad")
 
 # 2. Train and annotate with unknown-gating enabled
-cn.fit(ref, label_key="your_cell_type_column")
+cn.load_data(ref, data=ref.X, labels=ref.obs["your_cell_type_column"].to_numpy())
+cn.fit(ref)
 cn.annotate(ref, "your_cell_type_column", qry, enable_unknown=True)
 
 # 3. Use predictions downstream
@@ -197,20 +182,20 @@ When `enable_unknown=True`, Cytoneighbor writes diagnostic columns to
 | Column | Meaning |
 |---|---|
 | `cytoneighbor_prediction` | Predicted label (or *Unknown*) |
-| `cytoneighbor_confidence` | Top-1 label probability (0–1) |
-| `cytoneighbor_margin` | Gap between top-1 and top-2 probabilities |
+| `cytoneighbor_confidence` | Top-class preference score (0–1) |
+| `cytoneighbor_margin` | Gap between the two highest class preference scores |
 | `cytoneighbor_norm_entropy` | Normalised prediction entropy (0–1) |
 | `cytoneighbor_is_unknown` | Boolean: was this cell gated as Unknown? |
 
-**How to interpret**: low confidence + low margin + high entropy = weak
-neighbour evidence. Cytoneighbor flags these cells as *Unknown* instead of
-forcing an incorrect label — you can then inspect them separately or assign
-them to novel cell types.
+**How to interpret**. Treat *Unknown* as a deferral for review. Default thresholds
+are development heuristics. The revision reports known-type error screening and
+reference-absent types separately. Inspect both error interception and correct
+labels deferred before transferring the rule to a new dataset.
 
 ### &#128225; Boundary-preserving Batch Integration
 
-Integrate multi-batch, multi-donor single-cell data while preserving
-biologically meaningful boundaries between related cell types.
+Build a graph across batches and examine related cell-type boundaries alongside
+batch mixing. The study compares graph clustering and label transfer separately.
 
 ```python
 import cytoneighbor as cn
@@ -222,13 +207,14 @@ adata = sc.read_h5ad("your_multi_batch_data.h5ad")
 # 2. Standard preprocessing
 sc.pp.normalize_total(adata, target_sum=1e4)
 sc.pp.log1p(adata)
-sc.pp.highly_variable_genes(adata, n_top_genes=3000, batch_key="your_batch_column")
+sc.pp.highly_variable_genes(adata, n_top_genes=3000, batch_key="your_batch_column", subset=True)
 
 # 3. Build Cytoneighbor neighbour graph
-cn.fit(adata, label_key="your_cell_type_column")
+cn.load_data(adata, data=adata.X, labels=adata.obs["your_cell_type_column"].to_numpy())
+cn.fit(adata)
 cn.transform(adata, n_neighbors=15)
 
-# 4. Use the graph for ANY downstream Scanpy function
+# 4. Use the graph in Scanpy
 sc.tl.umap(adata, neighbors_key="neighbors")          # UMAP from Cytoneighbor graph
 sc.tl.leiden(adata, neighbors_key="neighbors")         # clustering
 sc.tl.rank_genes_groups(adata, groupby="leiden")       # marker detection
@@ -238,22 +224,21 @@ sc.tl.rank_genes_groups(adata, groupby="leiden")       # marker detection
 # against uncorrected baseline — see tutorials for full example
 ```
 
-The key is `neighbors_key="neighbors"` — it plugs Cytoneighbor into your
-existing Scanpy workflow without changing anything else.
+Pass `neighbors_key="neighbors"` to Scanpy to use the Cytoneighbor graph.
 
 ### &#128300; Rare-cell Recovery with Gene-CutMix
 
-Rare cell types (e.g. delta cells in pancreas, NKT cells in PBMC) often lose
-neighbour evidence due to severe abundance imbalance. Gene-CutMix generates
-synthetic training pairs that preserve the discriminative signal without
-inflating the reference.
+Gene-CutMix generates synthetic profiles for training. The revision compares
+several controls under pancreatic delta-cell scarcity and uses real cells in
+both inference reference pools. The direction of the effect depends on the
+reference pool, comparator and seed.
 
 ```python
 # Gene-CutMix is enabled by default during fit().
 # Tune its behaviour via optional parameters:
+cn.load_data(adata, data=adata.X, labels=adata.obs["cell_type"].to_numpy())
 cn.fit(
     adata,
-    label_key="cell_type",
     synth_enable=True,           # enable Gene-CutMix (default: True)
     synth_mult_per_dt=2.0,       # synthesis multiplier per rare type
     synth_cap_per_dt=500,        # upper cap on synthetic cells per type
@@ -263,25 +248,26 @@ cn.fit(
 ### &#128137; Disease-state Matching
 
 For disease-vs-healthy comparisons, Cytoneighbor constructs state-matched
-neighbourhoods that separate compositional redistribution from genuine
-within-state expression changes.
+neighbourhoods for comparing state composition and within-state expression.
+The DKD example uses donors as the statistical units and reports exploratory
+patterns alongside adjusted results.
 
 ```python
 # Train on healthy reference, annotate disease query
-cn.fit(healthy_ref, label_key="cell_type")
+cn.load_data(healthy_ref, data=healthy_ref.X, labels=healthy_ref.obs["cell_type"].to_numpy())
+cn.fit(healthy_ref)
 cn.annotate(healthy_ref, "cell_type", disease_query, enable_unknown=False)
 
-# Use the neighbour graph for state-matched differential expression
-cn.transform(combined_data, n_neighbors=30)
-sc.tl.rank_genes_groups(combined_data, groupby="disease_state")
+# Inspect the predicted reference labels before assigning disease states.
+print(disease_query.obs["cytoneighbor_prediction"].value_counts())
 ```
 
 ---
 
 ## &#128214; Tutorials
 
-Step-by-step guides with every cell output preserved so you can preview before
-running.
+Open the [annotation](tutorials/tutorial_annotation.ipynb) and
+[integration](tutorials/tutorial_integration.ipynb) notebooks to follow the workflows.
 
 ### 1. Cell-type Annotation
 
@@ -295,7 +281,7 @@ clustering and marker detection → evaluate against raw baseline.
 
 > &#128161; **Mock data fallback**: both tutorials automatically generate
 > synthetic data if the real dataset is not found, so you can follow along
-> immediately. See `tutorials/README.md` for prerequisites and dataset info.
+> immediately. See the [tutorial guide](tutorials/) for prerequisites and dataset info.
 
 ---
 
@@ -328,6 +314,7 @@ Cytoneighbor/
 +-- repro/                          #  Exact reproducibility assets
 |   +-- locks/                      #     Conda & pip environment lock files
 |   +-- container/                  #     Docker & Apptainer recipes
+|   +-- revision/                  #  Revision tables and summary checker
 |   +-- statistics/                 #     Manuscript statistical tables
 |   +-- qc_threshold_manifest.csv   #     Preprocessing and QC thresholds
 |
@@ -343,7 +330,7 @@ Cytoneighbor/
 +-- results/
 |   +-- README.md                   #  Pre-computed results inventory
 |
-+-- paper/                          #  Manuscript LaTeX source & figures
++-- paper/                          #  Historical LaTeX source & figures
 |   +-- main.tex
 |   +-- supplementary.tex
 |   +-- figures/
@@ -366,20 +353,11 @@ Cytoneighbor/
 
 ### Prerequisites
 
-1. Clone the repository and install with the Conda lock file:
-
-```bash
-git clone https://github.com/checce/Cytoneighbor.git
-cd Cytoneighbor
-conda env create -f repro/locks/environment-smn.yml
-conda activate smn
-pip install -e .
-```
+1. Follow the [source installation steps](#-installation) from the repository root.
 
 2. Download the required datasets from
    [Google Drive](https://drive.google.com/drive/folders/11PuJRaw_JC7xJhphQklac7eg9AuGHsCE?usp=sharing)
-   and place `.h5ad` files in `data/`. See `data/README.md` for the dataset
-   inventory.
+   and place `.h5ad` files in `data/`. See the [dataset guide](data/) for filenames and verification.
 
 ### Running experiments
 
@@ -389,45 +367,39 @@ python main.py run-experiment benchmark-resolution
 python main.py run-experiment mechanism-analysis
 python main.py run-experiment disease-discovery
 
-# LOBO annotation benchmarks (9 baselines + Cytoneighbor)
-python experiments/Annotation/Cytoneighbor.py
+# Leave-one-batch-out annotation with Cytoneighbor
+python experiments/Annotation/Cytoneighbor.py  # runs Cytoneighbor on the default dataset
 
 # Batch integration benchmarks
 python experiments/Rebatch/a-main_remove.py
 
 # Train a model on your own dataset
-python main.py train --dataset data/your_data.h5ad --cell-type cell_type
+python main.py train --dataset "data/your_data.h5ad" --cell-type cell_type
 ```
 
-> **Note**: `python main.py run-all` is available but may fail if the
-> spatial-validation experiment module is not present. Run individual
-> experiments for reliable results.
+Run from the repository root. These entry points cover the original experiment
+workflows. See [revision protocols](repro/revision/) for the later controls and
+for the inputs needed to replay them.
 
 See `experiments/Annotation/` for baseline method scripts (CellTypist,
 scANVI, scArches, SingleR, Seurat, SciBet, and classic ML classifiers).
 
-### Pre-computed results
+### Pre-computed results and revision checks
 
-Full experiment outputs (~8 GB, including trained model checkpoints and
-intermediate analysis files) are archived on Google Drive:
-[Results Archive](https://drive.google.com/drive/folders/1S41DI2W0Iy3YsorIWSHqWgZaWn2zZG7A?usp=sharing)
-
-Statistical tables cited in the manuscript and Supplementary Materials are
-included in the repository under `repro/statistics/`.
-
-### Containerized reproduction
-
-Docker and Apptainer recipes are provided in `repro/container/`:
+- [Original results archive](results/) lists the model checkpoints and figure
+  source outputs available on Google Drive.
+- [Original statistical summaries](repro/statistics/) provide compact tables.
+- [Revision evidence](repro/revision/) provides frozen aggregate tables and a
+  small, dependency-free checker for the main revision controls. Start here if
+  you want to inspect the reported comparisons without downloading models.
 
 ```bash
-# Docker
-docker build -t cytoneighbor -f repro/container/Dockerfile.smn .
-docker run --gpus all -it cytoneighbor python main.py run-experiment benchmark-resolution
-
-# Apptainer
-apptainer build cytoneighbor.sif repro/container/Apptainer.smn.def
-apptainer run --nv cytoneighbor.sif python main.py run-experiment benchmark-resolution
+python repro/revision/check_summaries.py
 ```
+
+The [container recipes](repro/container/) record the original environment.
+Some baselines require their own Python or R packages. See the
+[reproducibility guide](repro/) before launching a full experiment.
 
 ---
 
@@ -491,7 +463,7 @@ weights and can be distributed independently.
 
 If you use Cytoneighbor in your research, please cite:
 
-> Hu H. et al. *Inspectable neighbor evidence for single-cell state interpretation with Cytoneighbor*. (in preparation).
+> Hu H. et al. *Cytoneighbor: a scalable neighbor evidence framework for single-cell state analysis*. (in preparation).
 
 ---
 

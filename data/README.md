@@ -1,64 +1,50 @@
 # Cytoneighbor Datasets
 
-This directory should contain the single-cell RNA-seq datasets (`.h5ad`
-files) required to run the tutorials and reproduce the paper experiments.
+To follow the tutorials, start with the Human Immune dataset or use their
+synthetic examples. The study inputs are AnnData files and can be downloaded
+from the [Cytoneighbor dataset folder on Google Drive](https://drive.google.com/drive/folders/11PuJRaw_JC7xJhphQklac7eg9AuGHsCE?usp=sharing).
+Place downloaded files directly in `data/` using the exact names below.
 
-## Download
+## Dataset inventory
 
-All datasets are available at:
+These dimensions describe the input matrices before experiment-specific
+preprocessing.
 
-**[Google Drive: Cytoneighbor Datasets](https://drive.google.com/drive/folders/11PuJRaw_JC7xJhphQklac7eg9AuGHsCE?usp=sharing)**
+| File | Cells | Genes | Use |
+| --- | ---: | ---: | --- |
+| `Human immune.h5ad` | 33,506 | 12,303 | Annotation, integration and the tutorials |
+| `Pancreas.h5ad` | 16,382 | 18,771 | Pancreatic delta-cell scarcity experiments |
+| `Diabetic Kidney Disease.h5ad` | 39,176 | 27,980 | Kidney state matching and the donor analysis |
+| `Lung_atlas_public.h5ad` | 32,472 | 15,148 | Leave-one-batch-out annotation |
+| `Mouse_Kidney_mod1.h5ad` | 11,296 | 29,013 | Leave-one-batch-out annotation |
+| `8d2e51ab-0edd-46c8-bdac-558de319d6c2_sample_id_7_donor_id_6.h5ad` | 12,808 | 61,455 | Human tendon snRNA-seq annotation |
+| `Zebrafish embryonic cells.h5ad` | 26,022 | 25,258 | Annotation and reference-absent-type analysis. The study input is currently unlinked. |
 
-Download the `.h5ad` files and place them directly in this directory
-(no subdirectories).
+The separate PBMC scalability experiment uses the RNA UMI matrix from the
+[Seurat v4 PBMC CITE-seq resource](https://docs.scvi-tools.org/en/stable/api/reference/scvi.data.pbmc_seurat_v4_cite_seq.html).
+The [source download](https://ndownloader.figshare.com/files/27458840) is a
+161,764-cell atlas. Save it as `data/pbmc_seurat_v4.h5ad` for the revision
+protocol. The recorded SHA-256 is
+`c3b0100a6ce27beb64eff53692e09f98da2a58cfdfea08d15ff204f834b41396`.
+The measured pools use up to 100,000 cells from this atlas.
 
-## Dataset Inventory
-
-| File | Cells | Description | Used In |
-|---|---|---|---|
-| `Human immune.h5ad` | ~335,000 | Multi-batch, multi-donor PBMC atlas | Tutorials, Fig 2, Fig 3 |
-| `Pancreas.h5ad` | ~14,000 | Human pancreatic islet cells | Fig 4 (rare-cell) |
-| `Diabetic Kidney Disease.h5ad` | ~23,000 | PT cells, healthy and T2DM donors | Fig 5 (disease) |
-| `Lung_atlas_public.h5ad` | ~32,000 | Multi-donor lung cell atlas | LOBO benchmarks |
-| `Mouse_Kidney_mod1.h5ad` | ~12,000 | Mouse kidney scRNA-seq | LOBO benchmarks |
-| `Zebrafish embryonic cells.h5ad` | ~32,000 | Zebrafish embryogenesis | LOBO benchmarks |
-
-## Usage
-
-After downloading, verify the files:
-
-```bash
-ls -lh data/*.h5ad
-```
-
-Run the sanity check:
+## Download and verify
 
 ```bash
-python tests/test_quick_run.py
+python scripts/download_data.py --list
+python -m pip install gdown
+python scripts/download_data.py --file "Human immune.h5ad"
+python scripts/download_data.py --verify --file "Human immune.h5ad"
 ```
 
-Then open the tutorials:
+Run the helper without `--file` to download the currently linked study
+inputs. If Drive rate-limits the helper, download the files through the
+folder in your browser and run `--verify`. The
+[input checksums](input-checksums.csv) record the exact study copies.
+Follow the [reproduction guide](../repro/) for the next step.
 
-```bash
-jupyter notebook tutorials/tutorial_annotation.ipynb
-```
+## Data attribution
 
-## Citation
-
-Please cite the original data generators:
-
-- **Human Immune**: Freytag et al., Oetjen et al., Villani et al., Sun et al.
-- **Pancreas**: Baron et al. (2016), Muraro et al. (2016), Segerstolpe et al. (2016), Xin et al. (2016)
-- **Diabetic Kidney Disease**: Wilson et al. (2022)
-- **Lung Atlas**: Travaglini et al. (2020)
-- **Mouse Kidney**: Park et al. (2018)
-- **Zebrafish embryogenesis**: Wagner et al. (2018), Farrell et al. (2018)
-
-Full accession identifiers are documented in `repro/qc_threshold_manifest.csv`.
-
-## Automated Download
-
-```bash
-pip install gdown
-python scripts/download_data.py
-```
+Please cite the source studies and follow the original terms of use.
+See the [preprocessing manifest](../repro/qc_threshold_manifest.csv)
+for accession identifiers and the experiment-specific filters.

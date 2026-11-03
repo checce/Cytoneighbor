@@ -1,0 +1,3 @@
+﻿reference,n_query,n_rejected,n_wrong_rejected,n_correct_rejected,expected_wrong,observed_expected_ratio,scope
+within_fold,33506,2911,1405,1506,557.4366492063187,2.5204657820766654,posthoc_known_type_diagnostic_not_human_review_benefit
+within_fold_and_true_type,33506,2911,1405,1506,923.8259962407922,1.5208491704251539,posthoc_known_type_diagnostic_not_human_review_benefit

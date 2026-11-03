@@ -1,0 +1,5 @@
+﻿method,supervision,retrieval_endpoint,accuracy,macro_f1
+PCA,unsupervised,native latent top-15 kNN,0.9491643454038997,0.9251265073920896
+scVI,unsupervised,native latent top-15 kNN,0.9467767608436132,0.9234072735478022
+scANVI,label-aware,native latent top-15 kNN,0.9494627934739356,0.9325149704108573
+Cytoneighbor,label-aware,final neural-reranked top-15,0.9083764424990052,0.8848066406545303

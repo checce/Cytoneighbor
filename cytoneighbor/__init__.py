@@ -118,7 +118,8 @@ def quick_annotate(
     >>> result = cn.quick_annotate(ref, "cell_type", qry)
     >>> print(result.obs["cytoneighbor_prediction"].value_counts())
     """
-    fit(reference, label_key=label_key, epochs=epochs,
+    load_data(reference, data=reference.X, labels=reference.obs[label_key].to_numpy())
+    fit(reference, epochs=epochs,
         early_stopping_patience=early_stopping_patience, **kwargs)
 
     if query is None:
@@ -129,6 +130,8 @@ def quick_annotate(
         label_key,
         query,
         enable_unknown=enable_unknown,
+        use_cuda=kwargs.get("use_cuda", True),
+        use_amp=kwargs.get("use_amp", True),
     )
 
     return query
