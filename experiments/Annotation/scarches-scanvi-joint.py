@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 # --- Environment variable configuration (compatibility from scArches scripts) ---
 os.environ["SCIPY_ARRAY_API"] = "1"
 os.environ["SKLEARN_ENABLE_ARRAY_API"] = "0"
@@ -31,9 +32,10 @@ from sklearn.metrics import (
 # --- Global configuration ---
 # Modify paths according to your setup
 
-H5AD_PATH = "E:/Project/Cytoneighbor_Project/data/Zebrafish embryonic cells.h5ad"
-OUTPUT_BASE_DIR = "E:/Project/Cytoneighbor_Project/results/CV_Perfomace"
-DATASET_NAME = "Zebrafish embryonic cells"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+H5AD_PATH = os.environ.get("CYTONEIGHBOR_DATA", str(PROJECT_ROOT / "data" / "Zebrafish embryonic cells.h5ad"))
+OUTPUT_BASE_DIR = str(PROJECT_ROOT / "results" / "CV_Perfomace")
+DATASET_NAME = Path(H5AD_PATH).stem
 
 BATCH_KEY = "batch"
 CELL_TYPE_KEY = "cell_type"

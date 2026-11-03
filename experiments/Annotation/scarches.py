@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 os.environ["SCIPY_ARRAY_API"] = "1"
 os.environ["SKLEARN_ENABLE_ARRAY_API"] = "0"
 
@@ -21,11 +22,12 @@ from sklearn.metrics import (
 from sklearn.neighbors import KNeighborsClassifier
 
 # --- Configuration ---
-H5AD_PATH = "E:/Project/Cytoneighbor_Project/data/Zebrafish embryonic cells.h5ad"
-OUTPUT_DIR = "E:/Project/Cytoneighbor_Project/results/CV_Perfomace"
-DATASET_NAME = "Zebrafish embryonic cells"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+H5AD_PATH = os.environ.get("CYTONEIGHBOR_DATA", str(PROJECT_ROOT / "data" / "Zebrafish embryonic cells.h5ad"))
+OUTPUT_DIR = str(PROJECT_ROOT / "results" / "CV_Perfomace")
+DATASET_NAME = Path(H5AD_PATH).stem
 BATCH_KEY = "batch"
-    print("Warning: missing scvi-tools")
+CELL_TYPE_KEY = "cell_type"
 LATENT_DIM = 30
 N_TOP_GENES = 3000
 N_NEIGHBORS = 15  # [Modification 1: Align with Cytoneighbor at 15]
@@ -35,7 +37,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] - %(
 scvi.settings.seed = 42
 
 def main():
-    print("Warning: import error")
+    adata = anndata.read_h5ad(H5AD_PATH)
 
     # Ensure raw counts are used
     if 'counts' in adata.layers:

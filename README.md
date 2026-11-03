@@ -16,7 +16,7 @@
   </p>
 </p>
 
-[Get started](#-installation) · [Tutorials](tutorials/) · [Download data](data/) · [Reproduce the study](repro/)
+[Get started](#install-cytoneighbor) · [Tutorials](tutorials/) · [Download data](data/) · [Reproduce the study](repro/)
 
 ---
 
@@ -52,6 +52,8 @@ downstream function that accepts a `neighbors_key`.
 
 ---
 
+<a name="install-cytoneighbor"></a>
+
 ## &#128230; Installation
 
 ### From source (recommended)
@@ -62,16 +64,16 @@ Use Python 3.10 or 3.11 in a fresh environment. Run the following from a termina
 git clone https://github.com/checce/Cytoneighbor.git
 cd Cytoneighbor
 
-# CPU-only (no GPU required)
-pip install -e .
+# Core package and quick sanity check
+python -m pip install -e .
 
-# Development install (includes testing tools)
-pip install -e ".[dev]"
+# Or install the notebook and test dependencies as well
+python -m pip install -e ".[dev]"
 ```
 
 The default FAISS backend is CPU-based. PyTorch can use CUDA on a compatible
 system. See the [recorded environment](repro/locks/) and
-[container notes](repro/container/) for the historical software stack.
+[historical container notes](repro/container/) for the original software stack.
 
 ### Verify your installation
 
@@ -115,7 +117,8 @@ print(result.obs["cytoneighbor_prediction"].value_counts())
 ```
 
 Try the [annotation tutorial](tutorials/tutorial_annotation.ipynb) with synthetic data before downloading a real dataset.
-> ---
+
+---
 
 ## &#128218; API at a Glance
 
@@ -126,14 +129,14 @@ import cytoneighbor as cn
 result = cn.quick_annotate(ref, "cell_type", query)
 
 # --- Step-by-step for full control ---
-cn.load_data(adata, data=X, labels=labels)    # prepare expression matrix
-cn.fit(adata)                                 # train SymRelEnc model
-cn.transform(adata, n_neighbors=15)            # build neighbour graph
-cn.annotate(ref, "cell_type", query, enable_unknown=True)  # transfer labels
+cn.load_data(ref, data=ref.X, labels=ref.obs["cell_type"].to_numpy())
+cn.fit(ref)
+cn.transform(ref, n_neighbors=15)
+cn.annotate(ref, "cell_type", query, enable_unknown=True)
 
 # --- Save and load trained models ---
-cn.save_model(adata, "my_model.zip")
-cn.load_model(adata, "my_model.zip")
+cn.save_model(ref, "my_model.zip")
+cn.load_model(ref, "my_model.zip")
 ```
 
 | Function | What it does |
@@ -172,8 +175,6 @@ cn.annotate(ref, "your_cell_type_column", qry, enable_unknown=True)
 qry.write("annotated.h5ad")
 qry.obs[["cytoneighbor_prediction", "cytoneighbor_confidence"]].to_csv("predictions.csv")
 
-# 4. Run differential expression per predicted cell type
-sc.tl.rank_genes_groups(qry, groupby="cytoneighbor_prediction")
 ```
 
 When `enable_unknown=True`, Cytoneighbor writes diagnostic columns to
@@ -216,7 +217,7 @@ cn.transform(adata, n_neighbors=15)
 
 # 4. Use the graph in Scanpy
 sc.tl.umap(adata, neighbors_key="neighbors")          # UMAP from Cytoneighbor graph
-sc.tl.leiden(adata, neighbors_key="neighbors")         # clustering
+sc.tl.leiden(adata, neighbors_key="neighbors")         # clustering, install .[dev]
 sc.tl.rank_genes_groups(adata, groupby="leiden")       # marker detection
 
 # 5. Evaluate integration quality
@@ -290,7 +291,7 @@ clustering and marker detection → evaluate against raw baseline.
 ```text
 Cytoneighbor/
 |
-+-- cytoneighbor/                   #  Core package  (pip install cytoneighbor)
++-- cytoneighbor/                   #  Core package
 |   +-- __init__.py                 #     Public API + quick_annotate() entry point
 |   +-- model.py                    #     SymRelEnc, FAISS HNSW, Gene-CutMix, annotate
 |   +-- trainer.py                  #     Training wrapper (CytoneighborWrapper, TrainingManager)
@@ -302,7 +303,7 @@ Cytoneighbor/
 |   +-- README.md                   #     Tutorial prerequisites & dataset info
 |
 +-- experiments/                    #  Paper reproducibility scripts
-|   +-- Annotation/                 #     LOBO annotation benchmarks (9 baselines)
+|   +-- Annotation/                 #     LOBO annotation and baseline drivers
 |   +-- Rebatch/                    #     Batch integration benchmarks
 |   +-- benchmark_resolution.py     #     Resolution stress-test (NK vs NKT)
 |   +-- mechanism_analysis.py       #     Gene-CutMix mechanism study
@@ -311,7 +312,7 @@ Cytoneighbor/
 +-- tests/                          #  Automated tests
 |   +-- test_quick_run.py           #     30-second sanity check (no data download)
 |
-+-- repro/                          #  Exact reproducibility assets
++-- repro/                          #  Reproduction guides and frozen evidence
 |   +-- locks/                      #     Conda & pip environment lock files
 |   +-- container/                  #     Docker & Apptainer recipes
 |   +-- revision/                  #  Revision tables and summary checker
@@ -326,6 +327,7 @@ Cytoneighbor/
 |
 +-- data/
 |   +-- README.md                   #  Dataset inventory & download instructions
+|   +-- input-checksums.csv         #  Exact input fingerprints
 |
 +-- results/
 |   +-- README.md                   #  Pre-computed results inventory
@@ -349,17 +351,23 @@ Cytoneighbor/
 
 ---
 
+<a name="reproduce-the-paper"></a>
+
 ## &#128200; Reproducing the Paper
 
 ### Prerequisites
 
-1. Follow the [source installation steps](#-installation) from the repository root.
+1. Follow the [source installation steps](#install-cytoneighbor) from the repository root.
 
 2. Download the required datasets from
    [Google Drive](https://drive.google.com/drive/folders/11PuJRaw_JC7xJhphQklac7eg9AuGHsCE?usp=sharing)
    and place `.h5ad` files in `data/`. See the [dataset guide](data/) for filenames and verification.
 
-### Running experiments
+### Running the original workflows
+
+Install the additional Python dependencies with `python -m pip install -e ".[benchmarks]"`.
+Run these commands from the repository root. The
+[experiment guide](repro/#original-experiments) lists input files and baseline dependencies.
 
 ```bash
 # Run individual experiments via CLI
@@ -377,29 +385,25 @@ python experiments/Rebatch/a-main_remove.py
 python main.py train --dataset "data/your_data.h5ad" --cell-type cell_type
 ```
 
-Run from the repository root. These entry points cover the original experiment
-workflows. See [revision protocols](repro/revision/) for the later controls and
-for the inputs needed to replay them.
-
-See `experiments/Annotation/` for baseline method scripts (CellTypist,
-scANVI, scArches, SingleR, Seurat, SciBet, and classic ML classifiers).
+The revision controls use the distinct protocols in the
+[revision evidence guide](repro/revision/).
 
 ### Pre-computed results and revision checks
 
 - [Original results archive](results/) lists the model checkpoints and figure
   source outputs available on Google Drive.
 - [Original statistical summaries](repro/statistics/) provide compact tables.
-- [Revision evidence](repro/revision/) provides frozen aggregate tables and a
-  small, dependency-free checker for the main revision controls. Start here if
-  you want to inspect the reported comparisons without downloading models.
+- [Revision evidence](repro/revision/) provides frozen tables and compact replay inputs.
+  You can check their integrity and replay key revision metrics without downloading models or cell matrices.
 
 ```bash
-python repro/revision/check_summaries.py
+python repro/revision/check_summaries.py  # standard library only
+python repro/revision/replay_tables.py    # requires NumPy
 ```
 
-The [container recipes](repro/container/) record the original environment.
-Some baselines require their own Python or R packages. See the
-[reproducibility guide](repro/) before launching a full experiment.
+The replay starts from archived rank counts, donor estimates, graph contingency
+counts and recorded resource measurements. Repeating training and inference for
+every revision control requires additional frozen inputs and checkpoints.
 
 ---
 
@@ -409,16 +413,17 @@ Some baselines require their own Python or R packages. See the
 
 - **Reference AnnData**: must have a column in `.obs` with cell-type labels
   (e.g. `"cell_type"`, `"final_annotation"`)
-- **Query AnnData**: raw or log-normalised counts (same gene set as reference)
-- **Hardware**: runs on CPU, but GPU (CUDA) is recommended for datasets with
-  more than 50,000 cells
+- **Query AnnData**: align the feature names to the reference and use the same
+  expression scale and preprocessing in both datasets.
+- **Hardware**: a CPU is sufficient for the tutorials. Memory and runtime for
+  larger jobs depend on the feature count, model, graph and available hardware.
 
 ### Recommended preprocessing
 
 ```python
 import scanpy as sc
 
-# Normalize and log-transform
+# Start from counts. Skip these steps for already log-normalised input.
 sc.pp.normalize_total(adata, target_sum=1e4)
 sc.pp.log1p(adata)
 
@@ -426,30 +431,27 @@ sc.pp.log1p(adata)
 sc.pp.highly_variable_genes(adata, n_top_genes=3000)
 adata = adata[:, adata.var.highly_variable]
 
-# Cytoneighbor works with the raw expression matrix — no PCA required.
+# Use the same selected genes for reference and query.
 ```
 
 ### Common questions
 
 **Q: My query has cell types not in the reference. What happens?**
 
-A: That is exactly what unknown-gating is designed for. Cells with weak
-neighbour evidence across *all* reference types are retained as `"Unknown"`
-instead of being misclassified. You can inspect these cells separately to
-identify novel populations.
+A: Review deferred cells alongside their neighbour scores and marker evidence.
+A reference-absent type can still receive a known label, and a correctly
+classified known cell can be deferred. The default gate is heuristic.
 
 **Q: Can I use Cytoneighbor for cross-species mapping?**
 
-A: Yes. Train on a mouse reference dataset and annotate a human query (or vice
-versa) using orthologous gene sets as input features. The SymRelEnc model
-learns discriminative cell-pair relationships that generalize across species
-when gene symbols are matched.
+A: Cross-species mapping would require a shared ortholog feature set and
+independent validation on the target species. The study evaluated within-species tasks.
 
 **Q: How long does training take?**
 
-A: On a dataset with 50,000 cells and 3,000 genes, one epoch takes ~30 seconds
-on a single GPU. The default 50 epochs with early stopping typically converges
-in under 10 minutes. CPU training is 3-5× slower.
+A: Use the [recorded PBMC stage measurements](repro/revision/tables/pbmc_stage_measurements.csv)
+as a reference for the measured configuration. Training budgets, memory peaks
+and hardware differ across experiments.
 
 **Q: Can I save and share trained models?**
 
@@ -492,4 +494,3 @@ MIT License. See [LICENSE](LICENSE) for full text.
 
 For questions or support:
 - [GitHub Issues](https://github.com/checce/Cytoneighbor/issues)
-- Email: checce@github

@@ -1,0 +1,108 @@
+fold,cell_type,n,wrong,rejected,wrong_rejected,correct_rejected
+1,CD10+ B cells,91,12,2,1,1
+1,CD14+ Monocytes,350,10,16,5,11
+1,CD16+ Monocytes,61,0,0,0,0
+1,CD20+ B cells,43,0,0,0,0
+1,CD4+ T cells,577,325,144,66,78
+1,CD8+ T cells,93,12,11,5,6
+1,Erythrocytes,186,53,7,5,2
+1,Erythroid progenitors,112,13,1,1,0
+1,HSPCs,227,42,12,6,6
+1,Megakaryocyte progenitors,72,14,4,0,4
+1,Monocyte progenitors,183,34,6,5,1
+1,Monocyte-derived dendritic cells,89,5,5,2,3
+1,NK cells,26,5,4,3,1
+1,NKT cells,389,133,111,67,44
+1,Plasma cells,33,0,0,0,0
+1,Plasmacytoid dendritic cells,54,1,0,0,0
+2,CD10+ B cells,41,1,1,1,0
+2,CD14+ Monocytes,263,94,7,4,3
+2,CD16+ Monocytes,26,0,1,0,1
+2,CD20+ B cells,31,2,3,2,1
+2,CD4+ T cells,295,1,4,1,3
+2,CD8+ T cells,639,563,17,9,8
+2,Erythrocytes,1219,181,25,18,7
+2,Erythroid progenitors,249,19,14,4,10
+2,HSPCs,119,9,5,0,5
+2,Megakaryocyte progenitors,71,23,8,4,4
+2,Monocyte progenitors,109,49,14,12,2
+2,Monocyte-derived dendritic cells,60,9,8,4,4
+2,NKT cells,62,21,12,4,8
+2,Plasma cells,40,0,1,0,1
+2,Plasmacytoid dendritic cells,41,8,8,4,4
+3,CD10+ B cells,75,2,1,1,0
+3,CD14+ Monocytes,384,33,21,10,11
+3,CD16+ Monocytes,78,0,3,0,3
+3,CD20+ B cells,417,21,26,16,10
+3,CD4+ T cells,1652,625,692,325,367
+3,CD8+ T cells,253,49,63,21,42
+3,Erythrocytes,97,0,1,0,1
+3,Erythroid progenitors,102,79,5,1,4
+3,HSPCs,99,42,32,16,16
+3,Megakaryocyte progenitors,76,67,20,15,5
+3,Monocyte progenitors,136,55,22,14,8
+3,Monocyte-derived dendritic cells,65,0,1,0,1
+3,NK cells,63,18,20,11,9
+3,NKT cells,157,67,93,55,38
+3,Plasma cells,38,3,6,3,3
+3,Plasmacytoid dendritic cells,38,5,4,3,1
+4,CD14+ Monocytes,452,20,6,3,3
+4,CD16+ Monocytes,25,0,0,0,0
+4,CD20+ B cells,427,8,19,6,13
+4,CD4+ T cells,1238,14,62,7,55
+4,CD8+ T cells,270,97,39,13,26
+4,Megakaryocyte progenitors,16,0,0,0,0
+4,NK cells,476,140,116,88,28
+4,NKT cells,432,147,184,109,75
+4,Plasmacytoid dendritic cells,11,2,1,1,0
+5,CD14+ Monocytes,3388,101,11,6,5
+5,CD16+ Monocytes,364,16,0,0,0
+5,CD20+ B cells,1546,5,4,3,1
+5,CD4+ T cells,2937,14,12,5,7
+5,CD8+ T cells,350,38,59,16,43
+5,HSPCs,28,7,1,0,1
+5,Megakaryocyte progenitors,21,0,0,0,0
+5,Monocyte-derived dendritic cells,182,36,8,5,3
+5,NK cells,756,131,29,19,10
+5,NKT cells,1056,236,243,106,137
+5,Plasma cells,18,13,1,1,0
+5,Plasmacytoid dendritic cells,81,1,1,1,0
+6,CD14+ Monocytes,222,0,0,0,0
+6,CD16+ Monocytes,24,0,0,0,0
+6,CD20+ B cells,59,4,0,0,0
+6,CD4+ T cells,1054,17,48,8,40
+6,Megakaryocyte progenitors,6,1,0,0,0
+6,Monocyte-derived dendritic cells,25,6,0,0,0
+6,NK cells,99,2,7,1,6
+6,NKT cells,236,101,145,76,69
+7,CD14+ Monocytes,522,15,3,2,1
+7,CD16+ Monocytes,119,8,3,0,3
+7,CD20+ B cells,143,0,0,0,0
+7,CD4+ T cells,1162,7,30,6,24
+7,CD8+ T cells,76,57,31,18,13
+7,Megakaryocyte progenitors,8,3,0,0,0
+7,NK cells,191,13,21,8,13
+7,NKT cells,53,14,10,4,6
+7,Plasmacytoid dendritic cells,7,1,0,0,0
+8,CD14+ Monocytes,372,2,2,0,2
+8,CD16+ Monocytes,91,0,0,0,0
+8,CD20+ B cells,81,1,0,0,0
+8,CD4+ T cells,1052,23,35,12,23
+8,CD8+ T cells,354,203,126,67,59
+8,Monocyte-derived dendritic cells,36,1,1,0,1
+8,NK cells,219,109,24,18,6
+8,NKT cells,181,7,22,6,16
+8,Plasmacytoid dendritic cells,17,0,0,0,0
+9,CD14+ Monocytes,385,3,1,0,1
+9,CD16+ Monocytes,37,1,1,0,1
+9,CD20+ B cells,126,0,0,0,0
+9,CD4+ T cells,1044,34,34,14,20
+9,CD8+ T cells,148,25,20,7,13
+9,Monocyte-derived dendritic cells,21,0,0,0,0
+9,NK cells,464,191,23,15,8
+9,NKT cells,179,20,31,15,16
+9,Plasmacytoid dendritic cells,16,0,0,0,0
+10,CD14+ Monocytes,145,0,1,0,1
+10,CD16+ Monocytes,172,82,11,7,4
+10,Monocyte-derived dendritic cells,534,200,24,8,16
+10,Plasmacytoid dendritic cells,171,0,0,0,0

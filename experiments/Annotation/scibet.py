@@ -1,5 +1,6 @@
 import gc
 import os
+from pathlib import Path
 import logging
 import pandas as pd
 import numpy as np
@@ -11,12 +12,13 @@ from sklearn.metrics import (
     adjusted_mutual_info_score, normalized_mutual_info_score
 )
 
-H5AD_PATH = "E:/Project/Work2/Cell_datasets/Zebrafish embryonic cells.h5ad"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+H5AD_PATH = os.environ.get("CYTONEIGHBOR_DATA", str(PROJECT_ROOT / "data" / "Zebrafish embryonic cells.h5ad"))
 BATCH_KEY = "batch"
 CELL_TYPE_KEY = "cell_type"
 OUTPUT_DIR = "CV_scibet_results"
-DATASET_NAME = "Zebrafish embryonic cells"
-R_SCRIPT_PATH = "NetWork/run_scibet.R"
+DATASET_NAME = Path(H5AD_PATH).stem
+R_SCRIPT_PATH = str(Path(__file__).resolve().parent / "NetWork" / "run_scibet.R")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] - %(message)s")
 
@@ -33,7 +35,6 @@ def main():
 
     for i, query_batch in enumerate(all_batches):
         logging.info(f"--- [Fold {i + 1}/{len(all_batches)}]  query batch: {query_batch} ---")
-    print("Warning: missing scib")
         with tempfile.TemporaryDirectory() as temp_dir:
             query_adata = adata[adata.obs[BATCH_KEY] == query_batch].copy()
             ref_adata = adata[adata.obs[BATCH_KEY] != query_batch].copy()
@@ -43,7 +44,6 @@ def main():
             sc.pp.log1p(ref_adata)
             sc.pp.highly_variable_genes(ref_adata, n_top_genes=2000)
             hvg_mask = ref_adata.var['highly_variable']
-    print("Warning: missing rpy2")
             # SciBet expects Count or CPM input (outputting CPM as-is here)
             ref_adata_hvg = adata[ref_adata.obs_names, hvg_mask].copy()
             query_adata_hvg = adata[query_adata.obs_names, hvg_mask].copy()
@@ -53,7 +53,6 @@ def main():
 
             ref_df = ref_adata_hvg.to_df()
             ref_df['label'] = ref_adata_hvg.obs[CELL_TYPE_KEY].astype(str).values
-    print("Warning: missing anndata2ri")
             ref_csv_path = os.path.join(temp_dir, "reference.csv")
             query_csv_path = os.path.join(temp_dir, "query.csv")
             pred_csv_path = os.path.join(temp_dir, "predictions.csv")
@@ -63,7 +62,7 @@ def main():
 
             # Call R script
             command =["Rscript", R_SCRIPT_PATH, ref_csv_path, query_csv_path, pred_csv_path]
-    print("Warning: import error")
+            try:
                 subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
                 
                 predictions_df = pd.read_csv(pred_csv_path)

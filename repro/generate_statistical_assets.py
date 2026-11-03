@@ -1,3 +1,4 @@
+import argparse
 import json
 import math
 from pathlib import Path
@@ -8,10 +9,7 @@ import pandas as pd
 from scipy import stats
 
 
-ROOT = Path(r"E:/Project/Cytoneighbor_Project")
-RESULTS = ROOT / "results"
-OUTDIR = ROOT / "repro" / "statistics"
-OUTDIR.mkdir(parents=True, exist_ok=True)
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def normalize_fold(raw: object) -> Optional[str]:
@@ -91,8 +89,8 @@ def paired_stats(diff: np.ndarray) -> Dict[str, float]:
     }
 
 
-def load_annotation_long() -> pd.DataFrame:
-    base = RESULTS / "CV_Perfomace"
+def load_annotation_long(results_dir: Path) -> pd.DataFrame:
+    base = results_dir / "CV_Perfomace"
     rows: List[Dict[str, object]] = []
 
     for ds_dir in sorted([d for d in base.iterdir() if d.is_dir()]):
@@ -282,11 +280,11 @@ def build_annotation_stats(anno: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFra
     return paired, meta
 
 
-def load_integration_long() -> pd.DataFrame:
+def load_integration_long(results_dir: Path) -> pd.DataFrame:
     mapping = {
-        "Human immune": RESULTS / "CV_Rebatch" / "Human immune" / "Integration_Metrics.csv",
-        "Pancreas": RESULTS / "CV_Rebatch" / "Pancreas" / "Integration_Metrics (1).csv",
-        "Diabetic Kidney Disease": RESULTS / "CV_Rebatch" / "Diabetic Kidney Disease" / "Integration_Metrics (2).csv",
+        "Human immune": results_dir / "CV_Rebatch" / "Human immune" / "Integration_Metrics.csv",
+        "Pancreas": results_dir / "CV_Rebatch" / "Pancreas" / "Integration_Metrics (1).csv",
+        "Diabetic Kidney Disease": results_dir / "CV_Rebatch" / "Diabetic Kidney Disease" / "Integration_Metrics (2).csv",
     }
     rows = []
     for dataset, fp in mapping.items():
@@ -344,8 +342,8 @@ def build_integration_stats(integ: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def build_dkd_targeted() -> pd.DataFrame:
-    dkd_json = json.loads((RESULTS / "disease_discovery" / "experiment_results.json").read_text(encoding="utf-8"))
+def build_dkd_targeted(results_dir: Path) -> pd.DataFrame:
+    dkd_json = json.loads((results_dir / "disease_discovery" / "experiment_results.json").read_text(encoding="utf-8"))
     fs = dkd_json["characterization"]["functional_scores"]
     iscore = dkd_json["characterization"]["injury_scores"]
     rows = [
@@ -386,8 +384,7 @@ def build_dkd_targeted() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def build_mechanism_stats() -> pd.DataFrame:
-    fp = RESULTS / "mechanism_analysis" / "experiment_results.json"
+def build_mechanism_stats(fp: Path) -> pd.DataFrame:
     j = json.loads(fp.read_text(encoding="utf-8"))
     case_a = j["ablation_results"]["case_a"]["recall_scores"]
     case_b = j["ablation_results"]["case_b"]["recall_scores"]
@@ -403,8 +400,7 @@ def build_mechanism_stats() -> pd.DataFrame:
     return pd.DataFrame([row])
 
 
-def build_external_replication_registry() -> pd.DataFrame:
-    ext_fp = OUTDIR / "dkd_external_replication_effects.csv"
+def build_external_replication_registry(ext_fp: Path) -> pd.DataFrame:
     if ext_fp.exists():
         ext = pd.read_csv(ext_fp)
         # Keep a stable minimal registry schema while preserving richer columns if present.
@@ -452,26 +448,40 @@ def build_external_replication_registry() -> pd.DataFrame:
 
 
 def main() -> None:
-    anno = load_annotation_long()
-    anno.to_csv(OUTDIR / "annotation_fold_metrics_long.csv", index=False)
+    parser = argparse.ArgumentParser(description="Regenerate the original statistical summaries")
+    parser.add_argument("--results-dir", type=Path, default=ROOT / "results",
+                        help="Root containing the original saved result folders")
+    parser.add_argument("--output-dir", type=Path, default=ROOT / "results" / "statistics_recomputed",
+                        help="Destination for regenerated CSVs")
+    parser.add_argument("--mechanism-results", type=Path,
+                        help="Mechanism JSON (defaults to the original results folder)")
+    parser.add_argument("--external-effects", type=Path,
+                        default=ROOT / "repro" / "statistics" / "dkd_external_replication_effects.csv",
+                        help="Optional external replication effects input")
+    args = parser.parse_args()
+    output_dir = args.output_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
+    anno = load_annotation_long(args.results_dir)
+    anno.to_csv(output_dir / "annotation_fold_metrics_long.csv", index=False)
 
     anno_paired, anno_meta = build_annotation_stats(anno)
-    anno_paired.to_csv(OUTDIR / "annotation_paired_effects.csv", index=False)
-    anno_meta.to_csv(OUTDIR / "annotation_random_effects_meta.csv", index=False)
+    anno_paired.to_csv(output_dir / "annotation_paired_effects.csv", index=False)
+    anno_meta.to_csv(output_dir / "annotation_random_effects_meta.csv", index=False)
 
-    integ = load_integration_long()
-    integ.to_csv(OUTDIR / "integration_metrics_long.csv", index=False)
+    integ = load_integration_long(args.results_dir)
+    integ.to_csv(output_dir / "integration_metrics_long.csv", index=False)
     integ_stats = build_integration_stats(integ)
-    integ_stats.to_csv(OUTDIR / "integration_paired_effects.csv", index=False)
+    integ_stats.to_csv(output_dir / "integration_paired_effects.csv", index=False)
 
-    dkd = build_dkd_targeted()
-    dkd.to_csv(OUTDIR / "dkd_targeted_effects.csv", index=False)
+    dkd = build_dkd_targeted(args.results_dir)
+    dkd.to_csv(output_dir / "dkd_targeted_effects.csv", index=False)
 
-    mech = build_mechanism_stats()
-    mech.to_csv(OUTDIR / "mechanism_recallk_paired_effects.csv", index=False)
+    mechanism_input = args.mechanism_results or args.results_dir / "mechanism_analysis" / "experiment_results.json"
+    mech = build_mechanism_stats(mechanism_input)
+    mech.to_csv(output_dir / "mechanism_recallk_paired_effects.csv", index=False)
 
-    ext = build_external_replication_registry()
-    ext.to_csv(OUTDIR / "dkd_external_replication_registry.csv", index=False)
+    ext = build_external_replication_registry(args.external_effects)
+    ext.to_csv(output_dir / "dkd_external_replication_registry.csv", index=False)
 
     # Concise execution summary
     summary = {
@@ -484,7 +494,7 @@ def main() -> None:
         "dkd_external_replication_rows": int(len(ext)),
         "mechanism_rows": int(len(mech)),
     }
-    (OUTDIR / "statistical_assets_summary.json").write_text(
+    (output_dir / "statistical_assets_summary.json").write_text(
         json.dumps(summary, indent=2), encoding="utf-8"
     )
     print(json.dumps(summary, indent=2))

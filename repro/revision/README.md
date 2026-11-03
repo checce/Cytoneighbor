@@ -1,34 +1,31 @@
 # Revision Evidence
 
-Use this directory to inspect the main comparisons added or clarified in
-the revision. The CSVs contain frozen aggregate results and retain the
-source precision. The [manifest](manifest.csv) gives each source table,
-row count and checksum. It also records the local path fields omitted from
-the exports.
+The bundled CSVs contain frozen results and compact replay inputs. The
+[manifest](manifest.csv) gives their source, row count and SHA-256.
+Start from the repository root.
 
 ```bash
 python repro/revision/check_summaries.py
+python repro/revision/replay_tables.py
 ```
 
-This command checks file integrity and recomputes selected summaries from
-the bundled tables. It uses the Python standard library, takes no study
-data and runs no training.
+The first command uses standard Python. The second requires NumPy and
+recomputes the metrics below. Install NumPy with `python -m pip install numpy`
+if you only want to run the replay. Both commands work without models,
+expression matrices or the original results archive.
 
-| Topic | Bundled evidence | Protocol details |
+| Topic | Inputs and outputs | What the replay verifies |
 | --- | --- | --- |
-| PBMC scale | [Stage summaries](tables/pbmc_resource_summary.csv) | Nested pools of 25k, 50k, 80k and 100k cells from the separate Seurat v4 PBMC resource. Fit, full-pool graph construction and held-out annotation have different workloads and should be compared within phase. The resource values describe a single recorded environment and seed. |
-| Unknown | [Pooled counts](tables/unknown_known_type_pooled.csv), [fold counts](tables/unknown_known_type_by_fold.csv), [random references](tables/unknown_random_reference.csv) and [zebrafish counts](tables/unknown_zebrafish_by_type.csv) | Known-type screening uses 33,506 held-out predictions. Coverage, accuracy on retained calls and deferral of correct calls have different denominators. The zebrafish analysis evaluates reference-absent types separately. The thresholds are heuristic and lack independent calibration. |
-| Integration and marker exposure | [Native graph clustering](tables/native_graph_clustering.csv), [label transfer](tables/native_label_transfer.csv), [common graph subgroups](tables/common_graph_subgroup_summary.csv), [feature provenance](tables/feature_provenance.csv) and [marker replay](tables/marker_control_verification_replay.csv) | Compare graph clustering and supervised label transfer separately. The main integration marker display uses the shared automatically selected features. The original marker-retained boundary protocol, bounded feature control and verification replay are separate. The bounded control does not rerun the full default 3,000-feature pipeline. |
-| Gene-CutMix | [All final-neighbour endpoints](tables/gene_cutmix_final_neighbours.csv) and [training budgets](tables/gene_cutmix_training_budgets.csv) | Five arms and three seeds use a common 1,788-cell training reference. The same models are evaluated with the capped and expanded 15,337-cell inference references. Query-hit rate, authentic-reference recall and delta-neighbour fraction use different denominators. These files describe final neural ranking. The original graph connectivity ranking is a separate protocol. |
-| DKD | [Donor-level tests](tables/dkd_state_inference.csv) and [composition contrasts](tables/dkd_composition_standardization.csv) | Six healthy and five DKD donors are the statistical units. The primary mean log-normalized expression and full-library CPM sensitivity use separate three-state BH families. Composition contrasts and state-matched patterns are exploratory. |
+| PBMC scale | [Stage measurements](tables/pbmc_stage_measurements.csv), [wide summary](tables/pbmc_resource_summary.csv) | Twelve completed stages across 25k, 50k, 80k and 100k cells. Compare like stages within the recorded seed and environment. |
+| Unknown | [Fold-by-type counts](tables/unknown_fold_type_counts.csv), [pooled screening](tables/unknown_known_type_pooled.csv), [random references](tables/unknown_random_reference.csv) and [zebrafish counts](tables/unknown_zebrafish_by_type.csv) | Known-type deferrals and both same-workload random references. Zebrafish known and reference-absent totals are reported separately. The defaults are heuristic and lack independent calibration. |
+| Integration and marker exposure | [Common-graph contingencies](tables/common_graph_contingencies.csv), [common-graph metrics](tables/common_graph_metrics.csv), [native clustering](tables/native_graph_clustering.csv), [native label transfer](tables/native_label_transfer.csv), [feature provenance](tables/feature_provenance.csv) | NMI and ARI for the four common-graph partitions. The native graph comparison and native label transfer use separate endpoints. The main integration marker display uses the shared automatically selected features. The original marker-retained boundary protocol, bounded feature control and verification replay remain separate. |
+| Gene-CutMix | [Rank counts](tables/gene_cutmix_rank_counts.csv), [final-neighbour endpoints](tables/gene_cutmix_final_neighbours.csv) and [training budgets](tables/gene_cutmix_training_budgets.csv) | Five arms and three seeds in both inference pools. Computes query-hit rate, authentic-reference recall, delta-neighbour fraction and mean censored first rank. These are final neural ranks. The original graph-connectivity ranking uses a different protocol. |
+| DKD | [Donor-level replay inputs](tables/dkd_donor_replay_inputs.csv), [inference](tables/dkd_state_inference.csv) and [composition contrasts](tables/dkd_composition_standardization.csv) | Repeats the six one-sided donor permutations and both three-state BH families with seed 42. The two estimands are mean log-normalized expression and full-library CPM sensitivity. Composition contrasts are exploratory. |
 
-## Replaying the revision
-
-The tables and arithmetic checks are available from a fresh clone. An
-end-to-end replay of the revision also requires frozen analysis inputs
-such as the PBMC split and feature order, held-out diagnostics and ranks,
-saved graph artefacts, and the DKD proximal-tubule export. The existing
-[original results archive](../../results/) is the starting point for the
-original workflows. A complete public revision replay bundle is currently
-unavailable. The [data guide](../../data/) identifies the study inputs
-and the upstream PBMC download.
+The replay begins with the recorded analysis inputs and does not retrain
+models, rebuild neighbour graphs, rederive donor values from raw counts or
+rerun hardware timing. A complete training-to-results replay also requires
+the frozen splits, feature order, saved diagnostics and ranks, model
+checkpoints and the DKD proximal-tubule export. See the
+[study inputs](../../data/) and the [original results archive](../../results/)
+for the currently linked downloads.

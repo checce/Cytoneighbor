@@ -20,3 +20,9 @@ containing the inputs for the protocol you intend to replay. The
 [reproducibility guide](../repro/) distinguishes the original workflows
 from the revision analyses and identifies which checks run on GitHub
 assets alone.
+
+For regeneration of the original summary tables, the
+[DKD results folder with experiment_results.json](https://drive.google.com/drive/folders/1griQ2A8UXW4NLI2Gz_Vv-YQgmAb-DFZL)
+is one available copy. Use the
+[bundled mechanism recall inputs](../repro/original_inputs/mechanism_recall_scores.json)
+with the statistical generator. See the [reproduction guide](../repro/).

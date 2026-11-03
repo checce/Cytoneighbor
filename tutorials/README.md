@@ -38,10 +38,10 @@ closely related cell types.
 
 ## Prerequisites
 
-- Python 3.10 or later
+- Python 3.10 or 3.11
 - A source checkout with Cytoneighbor and the tutorial dependencies installed
 - The tutorials use a publicly available immune-cell dataset, or fall back
-  to synthetic mock data if the dataset is not found
+  to a small synthetic demonstration if the file is absent
 
 ---
 
@@ -53,7 +53,7 @@ git clone https://github.com/checce/Cytoneighbor.git
 cd Cytoneighbor
 python -m pip install -e ".[dev]"
 
-# Launch tutorials
+# Launch the tutorials from the repository root
 jupyter notebook tutorials/
 ```
 
@@ -68,7 +68,12 @@ mock data so you can follow along immediately.
 Download the real dataset from
 [Google Drive](https://drive.google.com/drive/folders/11PuJRaw_JC7xJhphQklac7eg9AuGHsCE?usp=sharing).
 
-See the [dataset guide](../data/) for the full inventory.
+See the [dataset guide](../data/) for filenames and checksum verification.
+
+Run the code cells in order. The synthetic outputs demonstrate the API.
+The integration notebook uses separate graphs for Cytoneighbor and the PCA
+baseline. Its UMAP-based LISI values illustrate the workflow. Use the
+[revision evidence](../repro/revision/) for manuscript comparisons.
 
 ---
 

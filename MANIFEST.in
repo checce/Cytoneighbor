@@ -4,7 +4,7 @@ include LICENSE
 include pyproject.toml
 
 # Include reproducibility assets
-recursive-include repro *.csv *.json *.yml *.txt *.md
+recursive-include repro *.csv *.json *.yml *.txt *.md *.py
 recursive-include configs *.yaml *.yml
 
 # Include tutorials

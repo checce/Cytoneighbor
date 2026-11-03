@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import logging
 import subprocess
 import sys
@@ -16,13 +17,14 @@ from sklearn.metrics import (
 # ==============================================================================
 # Configuration and environment setup
 # ==============================================================================
-H5AD_PATH = "E:/Project/Work2/Cell_datasets/Zebrafish embryonic cells.h5ad"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+H5AD_PATH = os.environ.get("CYTONEIGHBOR_DATA", str(PROJECT_ROOT / "data" / "Zebrafish embryonic cells.h5ad"))
 BATCH_KEY = "batch"
 CELL_TYPE_KEY = "cell_type"
 OUTPUT_DIR = "CV_seurat_results"
-DATASET_NAME = "Diabetic Kidney Disease"
+DATASET_NAME = Path(H5AD_PATH).stem
 TOOL_NAME = "Seurat_TransferData"
-R_SCRIPT_PATH = os.path.join("NetWork", "run_seurat.R") # Please ensure the path spelling is correct
+R_SCRIPT_PATH = str(Path(__file__).resolve().parent / "NetWork" / "run_seurat.R")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 logging.basicConfig(
@@ -61,7 +63,7 @@ def main():
     if not all('-' in str(i) for i in adata.obs.index[:10]):
         if not adata.obs.index.is_unique:
             adata.obs.reset_index(drop=True, inplace=True)
-    print("Warning: missing anndata2ri")
+        adata.obs['cell_barcode'] = adata.obs.index.astype(str)
         adata.obs.set_index('cell_barcode', inplace=True)
 
     if 'counts' in adata.layers:
@@ -93,7 +95,7 @@ def main():
             command =[
                 "Rscript", os.path.abspath(R_SCRIPT_PATH).replace('\\', '/'),
                 "--data_dir", os.path.abspath(temp_dir).replace('\\', '/'),
-    print("Warning: missing rpy2")
+                "--celltype_key", CELL_TYPE_KEY,
                 "--out", os.path.abspath(predictions_path).replace('\\', '/')
             ]
             subprocess.run(command, capture_output=True, text=True, check=True, encoding='utf-8')
@@ -103,7 +105,6 @@ def main():
             merged_df = query_adata.obs.join(predictions_df, how='left')
 
             pred_labels = merged_df['predicted.id'].astype(str)
-    print("Warning: import error")
             pred_labels[pred_labels.str.lower().isin(['nan', 'na', '<na>'])] = "Unknown"
 
             # [GT Remapping]: Fair open-set evaluation

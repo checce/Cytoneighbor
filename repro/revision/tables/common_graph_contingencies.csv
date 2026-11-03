@@ -1,0 +1,1025 @@
+method,resolution,cell_type,cluster,n
+Cytoneighbor,0.5,CD10+ B cells,0,0
+Cytoneighbor,0.5,CD10+ B cells,1,0
+Cytoneighbor,0.5,CD10+ B cells,10,0
+Cytoneighbor,0.5,CD10+ B cells,11,0
+Cytoneighbor,0.5,CD10+ B cells,12,0
+Cytoneighbor,0.5,CD10+ B cells,2,0
+Cytoneighbor,0.5,CD10+ B cells,3,0
+Cytoneighbor,0.5,CD10+ B cells,4,0
+Cytoneighbor,0.5,CD10+ B cells,5,0
+Cytoneighbor,0.5,CD10+ B cells,6,0
+Cytoneighbor,0.5,CD10+ B cells,7,61
+Cytoneighbor,0.5,CD10+ B cells,8,0
+Cytoneighbor,0.5,CD10+ B cells,9,0
+Cytoneighbor,0.5,CD14+ Monocytes,0,0
+Cytoneighbor,0.5,CD14+ Monocytes,1,1889
+Cytoneighbor,0.5,CD14+ Monocytes,10,0
+Cytoneighbor,0.5,CD14+ Monocytes,11,0
+Cytoneighbor,0.5,CD14+ Monocytes,12,0
+Cytoneighbor,0.5,CD14+ Monocytes,2,1
+Cytoneighbor,0.5,CD14+ Monocytes,3,0
+Cytoneighbor,0.5,CD14+ Monocytes,4,0
+Cytoneighbor,0.5,CD14+ Monocytes,5,0
+Cytoneighbor,0.5,CD14+ Monocytes,6,4
+Cytoneighbor,0.5,CD14+ Monocytes,7,21
+Cytoneighbor,0.5,CD14+ Monocytes,8,17
+Cytoneighbor,0.5,CD14+ Monocytes,9,14
+Cytoneighbor,0.5,CD16+ Monocytes,0,1
+Cytoneighbor,0.5,CD16+ Monocytes,1,9
+Cytoneighbor,0.5,CD16+ Monocytes,10,0
+Cytoneighbor,0.5,CD16+ Monocytes,11,0
+Cytoneighbor,0.5,CD16+ Monocytes,12,0
+Cytoneighbor,0.5,CD16+ Monocytes,2,0
+Cytoneighbor,0.5,CD16+ Monocytes,3,0
+Cytoneighbor,0.5,CD16+ Monocytes,4,0
+Cytoneighbor,0.5,CD16+ Monocytes,5,0
+Cytoneighbor,0.5,CD16+ Monocytes,6,0
+Cytoneighbor,0.5,CD16+ Monocytes,7,0
+Cytoneighbor,0.5,CD16+ Monocytes,8,286
+Cytoneighbor,0.5,CD16+ Monocytes,9,2
+Cytoneighbor,0.5,CD20+ B cells,0,0
+Cytoneighbor,0.5,CD20+ B cells,1,0
+Cytoneighbor,0.5,CD20+ B cells,10,0
+Cytoneighbor,0.5,CD20+ B cells,11,0
+Cytoneighbor,0.5,CD20+ B cells,12,0
+Cytoneighbor,0.5,CD20+ B cells,2,2
+Cytoneighbor,0.5,CD20+ B cells,3,1
+Cytoneighbor,0.5,CD20+ B cells,4,856
+Cytoneighbor,0.5,CD20+ B cells,5,3
+Cytoneighbor,0.5,CD20+ B cells,6,0
+Cytoneighbor,0.5,CD20+ B cells,7,0
+Cytoneighbor,0.5,CD20+ B cells,8,0
+Cytoneighbor,0.5,CD20+ B cells,9,0
+Cytoneighbor,0.5,CD4+ T cells,0,2979
+Cytoneighbor,0.5,CD4+ T cells,1,0
+Cytoneighbor,0.5,CD4+ T cells,10,0
+Cytoneighbor,0.5,CD4+ T cells,11,0
+Cytoneighbor,0.5,CD4+ T cells,12,0
+Cytoneighbor,0.5,CD4+ T cells,2,52
+Cytoneighbor,0.5,CD4+ T cells,3,270
+Cytoneighbor,0.5,CD4+ T cells,4,2
+Cytoneighbor,0.5,CD4+ T cells,5,0
+Cytoneighbor,0.5,CD4+ T cells,6,0
+Cytoneighbor,0.5,CD4+ T cells,7,0
+Cytoneighbor,0.5,CD4+ T cells,8,0
+Cytoneighbor,0.5,CD4+ T cells,9,0
+Cytoneighbor,0.5,CD8+ T cells,0,69
+Cytoneighbor,0.5,CD8+ T cells,1,0
+Cytoneighbor,0.5,CD8+ T cells,10,1
+Cytoneighbor,0.5,CD8+ T cells,11,0
+Cytoneighbor,0.5,CD8+ T cells,12,0
+Cytoneighbor,0.5,CD8+ T cells,2,1
+Cytoneighbor,0.5,CD8+ T cells,3,584
+Cytoneighbor,0.5,CD8+ T cells,4,0
+Cytoneighbor,0.5,CD8+ T cells,5,0
+Cytoneighbor,0.5,CD8+ T cells,6,0
+Cytoneighbor,0.5,CD8+ T cells,7,0
+Cytoneighbor,0.5,CD8+ T cells,8,0
+Cytoneighbor,0.5,CD8+ T cells,9,0
+Cytoneighbor,0.5,Erythrocytes,0,0
+Cytoneighbor,0.5,Erythrocytes,1,0
+Cytoneighbor,0.5,Erythrocytes,10,7
+Cytoneighbor,0.5,Erythrocytes,11,0
+Cytoneighbor,0.5,Erythrocytes,12,0
+Cytoneighbor,0.5,Erythrocytes,2,0
+Cytoneighbor,0.5,Erythrocytes,3,0
+Cytoneighbor,0.5,Erythrocytes,4,0
+Cytoneighbor,0.5,Erythrocytes,5,0
+Cytoneighbor,0.5,Erythrocytes,6,444
+Cytoneighbor,0.5,Erythrocytes,7,0
+Cytoneighbor,0.5,Erythrocytes,8,0
+Cytoneighbor,0.5,Erythrocytes,9,0
+Cytoneighbor,0.5,Erythroid progenitors,0,0
+Cytoneighbor,0.5,Erythroid progenitors,1,0
+Cytoneighbor,0.5,Erythroid progenitors,10,115
+Cytoneighbor,0.5,Erythroid progenitors,11,0
+Cytoneighbor,0.5,Erythroid progenitors,12,0
+Cytoneighbor,0.5,Erythroid progenitors,2,0
+Cytoneighbor,0.5,Erythroid progenitors,3,0
+Cytoneighbor,0.5,Erythroid progenitors,4,1
+Cytoneighbor,0.5,Erythroid progenitors,5,0
+Cytoneighbor,0.5,Erythroid progenitors,6,23
+Cytoneighbor,0.5,Erythroid progenitors,7,1
+Cytoneighbor,0.5,Erythroid progenitors,8,0
+Cytoneighbor,0.5,Erythroid progenitors,9,0
+Cytoneighbor,0.5,HSPCs,0,0
+Cytoneighbor,0.5,HSPCs,1,1
+Cytoneighbor,0.5,HSPCs,10,7
+Cytoneighbor,0.5,HSPCs,11,0
+Cytoneighbor,0.5,HSPCs,12,0
+Cytoneighbor,0.5,HSPCs,2,0
+Cytoneighbor,0.5,HSPCs,3,0
+Cytoneighbor,0.5,HSPCs,4,0
+Cytoneighbor,0.5,HSPCs,5,0
+Cytoneighbor,0.5,HSPCs,6,0
+Cytoneighbor,0.5,HSPCs,7,134
+Cytoneighbor,0.5,HSPCs,8,0
+Cytoneighbor,0.5,HSPCs,9,0
+Cytoneighbor,0.5,Megakaryocyte progenitors,0,2
+Cytoneighbor,0.5,Megakaryocyte progenitors,1,0
+Cytoneighbor,0.5,Megakaryocyte progenitors,10,71
+Cytoneighbor,0.5,Megakaryocyte progenitors,11,0
+Cytoneighbor,0.5,Megakaryocyte progenitors,12,0
+Cytoneighbor,0.5,Megakaryocyte progenitors,2,0
+Cytoneighbor,0.5,Megakaryocyte progenitors,3,1
+Cytoneighbor,0.5,Megakaryocyte progenitors,4,0
+Cytoneighbor,0.5,Megakaryocyte progenitors,5,0
+Cytoneighbor,0.5,Megakaryocyte progenitors,6,0
+Cytoneighbor,0.5,Megakaryocyte progenitors,7,7
+Cytoneighbor,0.5,Megakaryocyte progenitors,8,0
+Cytoneighbor,0.5,Megakaryocyte progenitors,9,0
+Cytoneighbor,0.5,Monocyte progenitors,0,0
+Cytoneighbor,0.5,Monocyte progenitors,1,11
+Cytoneighbor,0.5,Monocyte progenitors,10,0
+Cytoneighbor,0.5,Monocyte progenitors,11,0
+Cytoneighbor,0.5,Monocyte progenitors,12,0
+Cytoneighbor,0.5,Monocyte progenitors,2,0
+Cytoneighbor,0.5,Monocyte progenitors,3,0
+Cytoneighbor,0.5,Monocyte progenitors,4,0
+Cytoneighbor,0.5,Monocyte progenitors,5,0
+Cytoneighbor,0.5,Monocyte progenitors,6,0
+Cytoneighbor,0.5,Monocyte progenitors,7,117
+Cytoneighbor,0.5,Monocyte progenitors,8,0
+Cytoneighbor,0.5,Monocyte progenitors,9,1
+Cytoneighbor,0.5,Monocyte-derived dendritic cells,0,0
+Cytoneighbor,0.5,Monocyte-derived dendritic cells,1,13
+Cytoneighbor,0.5,Monocyte-derived dendritic cells,10,0
+Cytoneighbor,0.5,Monocyte-derived dendritic cells,11,0
+Cytoneighbor,0.5,Monocyte-derived dendritic cells,12,0
+Cytoneighbor,0.5,Monocyte-derived dendritic cells,2,0
+Cytoneighbor,0.5,Monocyte-derived dendritic cells,3,0
+Cytoneighbor,0.5,Monocyte-derived dendritic cells,4,0
+Cytoneighbor,0.5,Monocyte-derived dendritic cells,5,0
+Cytoneighbor,0.5,Monocyte-derived dendritic cells,6,0
+Cytoneighbor,0.5,Monocyte-derived dendritic cells,7,3
+Cytoneighbor,0.5,Monocyte-derived dendritic cells,8,21
+Cytoneighbor,0.5,Monocyte-derived dendritic cells,9,266
+Cytoneighbor,0.5,NK cells,0,4
+Cytoneighbor,0.5,NK cells,1,0
+Cytoneighbor,0.5,NK cells,10,0
+Cytoneighbor,0.5,NK cells,11,0
+Cytoneighbor,0.5,NK cells,12,0
+Cytoneighbor,0.5,NK cells,2,178
+Cytoneighbor,0.5,NK cells,3,0
+Cytoneighbor,0.5,NK cells,4,1
+Cytoneighbor,0.5,NK cells,5,504
+Cytoneighbor,0.5,NK cells,6,0
+Cytoneighbor,0.5,NK cells,7,2
+Cytoneighbor,0.5,NK cells,8,0
+Cytoneighbor,0.5,NK cells,9,0
+Cytoneighbor,0.5,NKT cells,0,38
+Cytoneighbor,0.5,NKT cells,1,0
+Cytoneighbor,0.5,NKT cells,10,0
+Cytoneighbor,0.5,NKT cells,11,0
+Cytoneighbor,0.5,NKT cells,12,0
+Cytoneighbor,0.5,NKT cells,2,748
+Cytoneighbor,0.5,NKT cells,3,20
+Cytoneighbor,0.5,NKT cells,4,2
+Cytoneighbor,0.5,NKT cells,5,16
+Cytoneighbor,0.5,NKT cells,6,0
+Cytoneighbor,0.5,NKT cells,7,1
+Cytoneighbor,0.5,NKT cells,8,0
+Cytoneighbor,0.5,NKT cells,9,0
+Cytoneighbor,0.5,Plasma cells,0,0
+Cytoneighbor,0.5,Plasma cells,1,0
+Cytoneighbor,0.5,Plasma cells,10,0
+Cytoneighbor,0.5,Plasma cells,11,0
+Cytoneighbor,0.5,Plasma cells,12,33
+Cytoneighbor,0.5,Plasma cells,2,0
+Cytoneighbor,0.5,Plasma cells,3,0
+Cytoneighbor,0.5,Plasma cells,4,5
+Cytoneighbor,0.5,Plasma cells,5,0
+Cytoneighbor,0.5,Plasma cells,6,0
+Cytoneighbor,0.5,Plasma cells,7,0
+Cytoneighbor,0.5,Plasma cells,8,0
+Cytoneighbor,0.5,Plasma cells,9,0
+Cytoneighbor,0.5,Plasmacytoid dendritic cells,0,0
+Cytoneighbor,0.5,Plasmacytoid dendritic cells,1,0
+Cytoneighbor,0.5,Plasmacytoid dendritic cells,10,0
+Cytoneighbor,0.5,Plasmacytoid dendritic cells,11,125
+Cytoneighbor,0.5,Plasmacytoid dendritic cells,12,0
+Cytoneighbor,0.5,Plasmacytoid dendritic cells,2,0
+Cytoneighbor,0.5,Plasmacytoid dendritic cells,3,0
+Cytoneighbor,0.5,Plasmacytoid dendritic cells,4,0
+Cytoneighbor,0.5,Plasmacytoid dendritic cells,5,0
+Cytoneighbor,0.5,Plasmacytoid dendritic cells,6,0
+Cytoneighbor,0.5,Plasmacytoid dendritic cells,7,4
+Cytoneighbor,0.5,Plasmacytoid dendritic cells,8,0
+Cytoneighbor,0.5,Plasmacytoid dendritic cells,9,0
+Cytoneighbor,1.0,CD10+ B cells,0,0
+Cytoneighbor,1.0,CD10+ B cells,1,0
+Cytoneighbor,1.0,CD10+ B cells,10,0
+Cytoneighbor,1.0,CD10+ B cells,11,0
+Cytoneighbor,1.0,CD10+ B cells,12,60
+Cytoneighbor,1.0,CD10+ B cells,13,0
+Cytoneighbor,1.0,CD10+ B cells,2,0
+Cytoneighbor,1.0,CD10+ B cells,3,0
+Cytoneighbor,1.0,CD10+ B cells,4,0
+Cytoneighbor,1.0,CD10+ B cells,5,0
+Cytoneighbor,1.0,CD10+ B cells,6,0
+Cytoneighbor,1.0,CD10+ B cells,7,0
+Cytoneighbor,1.0,CD10+ B cells,8,1
+Cytoneighbor,1.0,CD10+ B cells,9,0
+Cytoneighbor,1.0,CD14+ Monocytes,0,0
+Cytoneighbor,1.0,CD14+ Monocytes,1,1884
+Cytoneighbor,1.0,CD14+ Monocytes,10,0
+Cytoneighbor,1.0,CD14+ Monocytes,11,0
+Cytoneighbor,1.0,CD14+ Monocytes,12,0
+Cytoneighbor,1.0,CD14+ Monocytes,13,0
+Cytoneighbor,1.0,CD14+ Monocytes,2,1
+Cytoneighbor,1.0,CD14+ Monocytes,3,0
+Cytoneighbor,1.0,CD14+ Monocytes,4,0
+Cytoneighbor,1.0,CD14+ Monocytes,5,0
+Cytoneighbor,1.0,CD14+ Monocytes,6,4
+Cytoneighbor,1.0,CD14+ Monocytes,7,22
+Cytoneighbor,1.0,CD14+ Monocytes,8,21
+Cytoneighbor,1.0,CD14+ Monocytes,9,14
+Cytoneighbor,1.0,CD16+ Monocytes,0,1
+Cytoneighbor,1.0,CD16+ Monocytes,1,9
+Cytoneighbor,1.0,CD16+ Monocytes,10,0
+Cytoneighbor,1.0,CD16+ Monocytes,11,0
+Cytoneighbor,1.0,CD16+ Monocytes,12,0
+Cytoneighbor,1.0,CD16+ Monocytes,13,0
+Cytoneighbor,1.0,CD16+ Monocytes,2,0
+Cytoneighbor,1.0,CD16+ Monocytes,3,0
+Cytoneighbor,1.0,CD16+ Monocytes,4,0
+Cytoneighbor,1.0,CD16+ Monocytes,5,0
+Cytoneighbor,1.0,CD16+ Monocytes,6,0
+Cytoneighbor,1.0,CD16+ Monocytes,7,286
+Cytoneighbor,1.0,CD16+ Monocytes,8,0
+Cytoneighbor,1.0,CD16+ Monocytes,9,2
+Cytoneighbor,1.0,CD20+ B cells,0,0
+Cytoneighbor,1.0,CD20+ B cells,1,0
+Cytoneighbor,1.0,CD20+ B cells,10,0
+Cytoneighbor,1.0,CD20+ B cells,11,0
+Cytoneighbor,1.0,CD20+ B cells,12,0
+Cytoneighbor,1.0,CD20+ B cells,13,0
+Cytoneighbor,1.0,CD20+ B cells,2,2
+Cytoneighbor,1.0,CD20+ B cells,3,1
+Cytoneighbor,1.0,CD20+ B cells,4,856
+Cytoneighbor,1.0,CD20+ B cells,5,3
+Cytoneighbor,1.0,CD20+ B cells,6,0
+Cytoneighbor,1.0,CD20+ B cells,7,0
+Cytoneighbor,1.0,CD20+ B cells,8,0
+Cytoneighbor,1.0,CD20+ B cells,9,0
+Cytoneighbor,1.0,CD4+ T cells,0,2918
+Cytoneighbor,1.0,CD4+ T cells,1,0
+Cytoneighbor,1.0,CD4+ T cells,10,0
+Cytoneighbor,1.0,CD4+ T cells,11,0
+Cytoneighbor,1.0,CD4+ T cells,12,0
+Cytoneighbor,1.0,CD4+ T cells,13,0
+Cytoneighbor,1.0,CD4+ T cells,2,81
+Cytoneighbor,1.0,CD4+ T cells,3,301
+Cytoneighbor,1.0,CD4+ T cells,4,3
+Cytoneighbor,1.0,CD4+ T cells,5,0
+Cytoneighbor,1.0,CD4+ T cells,6,0
+Cytoneighbor,1.0,CD4+ T cells,7,0
+Cytoneighbor,1.0,CD4+ T cells,8,0
+Cytoneighbor,1.0,CD4+ T cells,9,0
+Cytoneighbor,1.0,CD8+ T cells,0,60
+Cytoneighbor,1.0,CD8+ T cells,1,0
+Cytoneighbor,1.0,CD8+ T cells,10,1
+Cytoneighbor,1.0,CD8+ T cells,11,0
+Cytoneighbor,1.0,CD8+ T cells,12,0
+Cytoneighbor,1.0,CD8+ T cells,13,0
+Cytoneighbor,1.0,CD8+ T cells,2,2
+Cytoneighbor,1.0,CD8+ T cells,3,592
+Cytoneighbor,1.0,CD8+ T cells,4,0
+Cytoneighbor,1.0,CD8+ T cells,5,0
+Cytoneighbor,1.0,CD8+ T cells,6,0
+Cytoneighbor,1.0,CD8+ T cells,7,0
+Cytoneighbor,1.0,CD8+ T cells,8,0
+Cytoneighbor,1.0,CD8+ T cells,9,0
+Cytoneighbor,1.0,Erythrocytes,0,0
+Cytoneighbor,1.0,Erythrocytes,1,0
+Cytoneighbor,1.0,Erythrocytes,10,7
+Cytoneighbor,1.0,Erythrocytes,11,0
+Cytoneighbor,1.0,Erythrocytes,12,0
+Cytoneighbor,1.0,Erythrocytes,13,0
+Cytoneighbor,1.0,Erythrocytes,2,0
+Cytoneighbor,1.0,Erythrocytes,3,0
+Cytoneighbor,1.0,Erythrocytes,4,0
+Cytoneighbor,1.0,Erythrocytes,5,0
+Cytoneighbor,1.0,Erythrocytes,6,444
+Cytoneighbor,1.0,Erythrocytes,7,0
+Cytoneighbor,1.0,Erythrocytes,8,0
+Cytoneighbor,1.0,Erythrocytes,9,0
+Cytoneighbor,1.0,Erythroid progenitors,0,0
+Cytoneighbor,1.0,Erythroid progenitors,1,0
+Cytoneighbor,1.0,Erythroid progenitors,10,115
+Cytoneighbor,1.0,Erythroid progenitors,11,0
+Cytoneighbor,1.0,Erythroid progenitors,12,1
+Cytoneighbor,1.0,Erythroid progenitors,13,0
+Cytoneighbor,1.0,Erythroid progenitors,2,0
+Cytoneighbor,1.0,Erythroid progenitors,3,0
+Cytoneighbor,1.0,Erythroid progenitors,4,1
+Cytoneighbor,1.0,Erythroid progenitors,5,0
+Cytoneighbor,1.0,Erythroid progenitors,6,23
+Cytoneighbor,1.0,Erythroid progenitors,7,0
+Cytoneighbor,1.0,Erythroid progenitors,8,0
+Cytoneighbor,1.0,Erythroid progenitors,9,0
+Cytoneighbor,1.0,HSPCs,0,0
+Cytoneighbor,1.0,HSPCs,1,1
+Cytoneighbor,1.0,HSPCs,10,7
+Cytoneighbor,1.0,HSPCs,11,0
+Cytoneighbor,1.0,HSPCs,12,2
+Cytoneighbor,1.0,HSPCs,13,0
+Cytoneighbor,1.0,HSPCs,2,0
+Cytoneighbor,1.0,HSPCs,3,0
+Cytoneighbor,1.0,HSPCs,4,0
+Cytoneighbor,1.0,HSPCs,5,0
+Cytoneighbor,1.0,HSPCs,6,0
+Cytoneighbor,1.0,HSPCs,7,0
+Cytoneighbor,1.0,HSPCs,8,132
+Cytoneighbor,1.0,HSPCs,9,0
+Cytoneighbor,1.0,Megakaryocyte progenitors,0,2
+Cytoneighbor,1.0,Megakaryocyte progenitors,1,0
+Cytoneighbor,1.0,Megakaryocyte progenitors,10,71
+Cytoneighbor,1.0,Megakaryocyte progenitors,11,0
+Cytoneighbor,1.0,Megakaryocyte progenitors,12,0
+Cytoneighbor,1.0,Megakaryocyte progenitors,13,0
+Cytoneighbor,1.0,Megakaryocyte progenitors,2,0
+Cytoneighbor,1.0,Megakaryocyte progenitors,3,1
+Cytoneighbor,1.0,Megakaryocyte progenitors,4,0
+Cytoneighbor,1.0,Megakaryocyte progenitors,5,0
+Cytoneighbor,1.0,Megakaryocyte progenitors,6,0
+Cytoneighbor,1.0,Megakaryocyte progenitors,7,0
+Cytoneighbor,1.0,Megakaryocyte progenitors,8,7
+Cytoneighbor,1.0,Megakaryocyte progenitors,9,0
+Cytoneighbor,1.0,Monocyte progenitors,0,0
+Cytoneighbor,1.0,Monocyte progenitors,1,11
+Cytoneighbor,1.0,Monocyte progenitors,10,0
+Cytoneighbor,1.0,Monocyte progenitors,11,0
+Cytoneighbor,1.0,Monocyte progenitors,12,1
+Cytoneighbor,1.0,Monocyte progenitors,13,0
+Cytoneighbor,1.0,Monocyte progenitors,2,0
+Cytoneighbor,1.0,Monocyte progenitors,3,0
+Cytoneighbor,1.0,Monocyte progenitors,4,0
+Cytoneighbor,1.0,Monocyte progenitors,5,0
+Cytoneighbor,1.0,Monocyte progenitors,6,0
+Cytoneighbor,1.0,Monocyte progenitors,7,0
+Cytoneighbor,1.0,Monocyte progenitors,8,116
+Cytoneighbor,1.0,Monocyte progenitors,9,1
+Cytoneighbor,1.0,Monocyte-derived dendritic cells,0,0
+Cytoneighbor,1.0,Monocyte-derived dendritic cells,1,13
+Cytoneighbor,1.0,Monocyte-derived dendritic cells,10,0
+Cytoneighbor,1.0,Monocyte-derived dendritic cells,11,0
+Cytoneighbor,1.0,Monocyte-derived dendritic cells,12,0
+Cytoneighbor,1.0,Monocyte-derived dendritic cells,13,0
+Cytoneighbor,1.0,Monocyte-derived dendritic cells,2,0
+Cytoneighbor,1.0,Monocyte-derived dendritic cells,3,0
+Cytoneighbor,1.0,Monocyte-derived dendritic cells,4,0
+Cytoneighbor,1.0,Monocyte-derived dendritic cells,5,0
+Cytoneighbor,1.0,Monocyte-derived dendritic cells,6,0
+Cytoneighbor,1.0,Monocyte-derived dendritic cells,7,21
+Cytoneighbor,1.0,Monocyte-derived dendritic cells,8,3
+Cytoneighbor,1.0,Monocyte-derived dendritic cells,9,266
+Cytoneighbor,1.0,NK cells,0,3
+Cytoneighbor,1.0,NK cells,1,0
+Cytoneighbor,1.0,NK cells,10,0
+Cytoneighbor,1.0,NK cells,11,0
+Cytoneighbor,1.0,NK cells,12,0
+Cytoneighbor,1.0,NK cells,13,0
+Cytoneighbor,1.0,NK cells,2,179
+Cytoneighbor,1.0,NK cells,3,0
+Cytoneighbor,1.0,NK cells,4,1
+Cytoneighbor,1.0,NK cells,5,504
+Cytoneighbor,1.0,NK cells,6,0
+Cytoneighbor,1.0,NK cells,7,0
+Cytoneighbor,1.0,NK cells,8,2
+Cytoneighbor,1.0,NK cells,9,0
+Cytoneighbor,1.0,NKT cells,0,26
+Cytoneighbor,1.0,NKT cells,1,0
+Cytoneighbor,1.0,NKT cells,10,0
+Cytoneighbor,1.0,NKT cells,11,0
+Cytoneighbor,1.0,NKT cells,12,0
+Cytoneighbor,1.0,NKT cells,13,0
+Cytoneighbor,1.0,NKT cells,2,761
+Cytoneighbor,1.0,NKT cells,3,19
+Cytoneighbor,1.0,NKT cells,4,2
+Cytoneighbor,1.0,NKT cells,5,16
+Cytoneighbor,1.0,NKT cells,6,0
+Cytoneighbor,1.0,NKT cells,7,0
+Cytoneighbor,1.0,NKT cells,8,1
+Cytoneighbor,1.0,NKT cells,9,0
+Cytoneighbor,1.0,Plasma cells,0,0
+Cytoneighbor,1.0,Plasma cells,1,0
+Cytoneighbor,1.0,Plasma cells,10,0
+Cytoneighbor,1.0,Plasma cells,11,0
+Cytoneighbor,1.0,Plasma cells,12,0
+Cytoneighbor,1.0,Plasma cells,13,33
+Cytoneighbor,1.0,Plasma cells,2,0
+Cytoneighbor,1.0,Plasma cells,3,0
+Cytoneighbor,1.0,Plasma cells,4,5
+Cytoneighbor,1.0,Plasma cells,5,0
+Cytoneighbor,1.0,Plasma cells,6,0
+Cytoneighbor,1.0,Plasma cells,7,0
+Cytoneighbor,1.0,Plasma cells,8,0
+Cytoneighbor,1.0,Plasma cells,9,0
+Cytoneighbor,1.0,Plasmacytoid dendritic cells,0,0
+Cytoneighbor,1.0,Plasmacytoid dendritic cells,1,0
+Cytoneighbor,1.0,Plasmacytoid dendritic cells,10,0
+Cytoneighbor,1.0,Plasmacytoid dendritic cells,11,125
+Cytoneighbor,1.0,Plasmacytoid dendritic cells,12,0
+Cytoneighbor,1.0,Plasmacytoid dendritic cells,13,0
+Cytoneighbor,1.0,Plasmacytoid dendritic cells,2,0
+Cytoneighbor,1.0,Plasmacytoid dendritic cells,3,0
+Cytoneighbor,1.0,Plasmacytoid dendritic cells,4,0
+Cytoneighbor,1.0,Plasmacytoid dendritic cells,5,0
+Cytoneighbor,1.0,Plasmacytoid dendritic cells,6,0
+Cytoneighbor,1.0,Plasmacytoid dendritic cells,7,0
+Cytoneighbor,1.0,Plasmacytoid dendritic cells,8,4
+Cytoneighbor,1.0,Plasmacytoid dendritic cells,9,0
+scANVI,0.5,CD10+ B cells,0,0
+scANVI,0.5,CD10+ B cells,1,0
+scANVI,0.5,CD10+ B cells,10,0
+scANVI,0.5,CD10+ B cells,11,0
+scANVI,0.5,CD10+ B cells,12,0
+scANVI,0.5,CD10+ B cells,13,60
+scANVI,0.5,CD10+ B cells,14,0
+scANVI,0.5,CD10+ B cells,15,0
+scANVI,0.5,CD10+ B cells,2,0
+scANVI,0.5,CD10+ B cells,3,0
+scANVI,0.5,CD10+ B cells,4,1
+scANVI,0.5,CD10+ B cells,5,0
+scANVI,0.5,CD10+ B cells,6,0
+scANVI,0.5,CD10+ B cells,7,0
+scANVI,0.5,CD10+ B cells,8,0
+scANVI,0.5,CD10+ B cells,9,0
+scANVI,0.5,CD14+ Monocytes,0,0
+scANVI,0.5,CD14+ Monocytes,1,1747
+scANVI,0.5,CD14+ Monocytes,10,14
+scANVI,0.5,CD14+ Monocytes,11,152
+scANVI,0.5,CD14+ Monocytes,12,0
+scANVI,0.5,CD14+ Monocytes,13,0
+scANVI,0.5,CD14+ Monocytes,14,0
+scANVI,0.5,CD14+ Monocytes,15,0
+scANVI,0.5,CD14+ Monocytes,2,0
+scANVI,0.5,CD14+ Monocytes,3,1
+scANVI,0.5,CD14+ Monocytes,4,0
+scANVI,0.5,CD14+ Monocytes,5,0
+scANVI,0.5,CD14+ Monocytes,6,0
+scANVI,0.5,CD14+ Monocytes,7,6
+scANVI,0.5,CD14+ Monocytes,8,26
+scANVI,0.5,CD14+ Monocytes,9,0
+scANVI,0.5,CD16+ Monocytes,0,0
+scANVI,0.5,CD16+ Monocytes,1,14
+scANVI,0.5,CD16+ Monocytes,10,0
+scANVI,0.5,CD16+ Monocytes,11,24
+scANVI,0.5,CD16+ Monocytes,12,0
+scANVI,0.5,CD16+ Monocytes,13,0
+scANVI,0.5,CD16+ Monocytes,14,0
+scANVI,0.5,CD16+ Monocytes,15,0
+scANVI,0.5,CD16+ Monocytes,2,0
+scANVI,0.5,CD16+ Monocytes,3,0
+scANVI,0.5,CD16+ Monocytes,4,0
+scANVI,0.5,CD16+ Monocytes,5,1
+scANVI,0.5,CD16+ Monocytes,6,0
+scANVI,0.5,CD16+ Monocytes,7,259
+scANVI,0.5,CD16+ Monocytes,8,0
+scANVI,0.5,CD16+ Monocytes,9,0
+scANVI,0.5,CD20+ B cells,0,1
+scANVI,0.5,CD20+ B cells,1,0
+scANVI,0.5,CD20+ B cells,10,0
+scANVI,0.5,CD20+ B cells,11,0
+scANVI,0.5,CD20+ B cells,12,0
+scANVI,0.5,CD20+ B cells,13,0
+scANVI,0.5,CD20+ B cells,14,0
+scANVI,0.5,CD20+ B cells,15,0
+scANVI,0.5,CD20+ B cells,2,0
+scANVI,0.5,CD20+ B cells,3,0
+scANVI,0.5,CD20+ B cells,4,860
+scANVI,0.5,CD20+ B cells,5,1
+scANVI,0.5,CD20+ B cells,6,0
+scANVI,0.5,CD20+ B cells,7,0
+scANVI,0.5,CD20+ B cells,8,0
+scANVI,0.5,CD20+ B cells,9,0
+scANVI,0.5,CD4+ T cells,0,1659
+scANVI,0.5,CD4+ T cells,1,0
+scANVI,0.5,CD4+ T cells,10,0
+scANVI,0.5,CD4+ T cells,11,0
+scANVI,0.5,CD4+ T cells,12,0
+scANVI,0.5,CD4+ T cells,13,0
+scANVI,0.5,CD4+ T cells,14,0
+scANVI,0.5,CD4+ T cells,15,0
+scANVI,0.5,CD4+ T cells,2,1592
+scANVI,0.5,CD4+ T cells,3,51
+scANVI,0.5,CD4+ T cells,4,1
+scANVI,0.5,CD4+ T cells,5,0
+scANVI,0.5,CD4+ T cells,6,0
+scANVI,0.5,CD4+ T cells,7,0
+scANVI,0.5,CD4+ T cells,8,0
+scANVI,0.5,CD4+ T cells,9,0
+scANVI,0.5,CD8+ T cells,0,642
+scANVI,0.5,CD8+ T cells,1,0
+scANVI,0.5,CD8+ T cells,10,0
+scANVI,0.5,CD8+ T cells,11,0
+scANVI,0.5,CD8+ T cells,12,0
+scANVI,0.5,CD8+ T cells,13,0
+scANVI,0.5,CD8+ T cells,14,0
+scANVI,0.5,CD8+ T cells,15,0
+scANVI,0.5,CD8+ T cells,2,5
+scANVI,0.5,CD8+ T cells,3,7
+scANVI,0.5,CD8+ T cells,4,0
+scANVI,0.5,CD8+ T cells,5,0
+scANVI,0.5,CD8+ T cells,6,0
+scANVI,0.5,CD8+ T cells,7,0
+scANVI,0.5,CD8+ T cells,8,1
+scANVI,0.5,CD8+ T cells,9,0
+scANVI,0.5,Erythrocytes,0,0
+scANVI,0.5,Erythrocytes,1,0
+scANVI,0.5,Erythrocytes,10,0
+scANVI,0.5,Erythrocytes,11,0
+scANVI,0.5,Erythrocytes,12,0
+scANVI,0.5,Erythrocytes,13,0
+scANVI,0.5,Erythrocytes,14,0
+scANVI,0.5,Erythrocytes,15,0
+scANVI,0.5,Erythrocytes,2,0
+scANVI,0.5,Erythrocytes,3,0
+scANVI,0.5,Erythrocytes,4,0
+scANVI,0.5,Erythrocytes,5,0
+scANVI,0.5,Erythrocytes,6,320
+scANVI,0.5,Erythrocytes,7,0
+scANVI,0.5,Erythrocytes,8,0
+scANVI,0.5,Erythrocytes,9,131
+scANVI,0.5,Erythroid progenitors,0,2
+scANVI,0.5,Erythroid progenitors,1,0
+scANVI,0.5,Erythroid progenitors,10,0
+scANVI,0.5,Erythroid progenitors,11,0
+scANVI,0.5,Erythroid progenitors,12,0
+scANVI,0.5,Erythroid progenitors,13,1
+scANVI,0.5,Erythroid progenitors,14,0
+scANVI,0.5,Erythroid progenitors,15,0
+scANVI,0.5,Erythroid progenitors,2,0
+scANVI,0.5,Erythroid progenitors,3,0
+scANVI,0.5,Erythroid progenitors,4,1
+scANVI,0.5,Erythroid progenitors,5,0
+scANVI,0.5,Erythroid progenitors,6,1
+scANVI,0.5,Erythroid progenitors,7,0
+scANVI,0.5,Erythroid progenitors,8,0
+scANVI,0.5,Erythroid progenitors,9,135
+scANVI,0.5,HSPCs,0,0
+scANVI,0.5,HSPCs,1,1
+scANVI,0.5,HSPCs,10,0
+scANVI,0.5,HSPCs,11,0
+scANVI,0.5,HSPCs,12,9
+scANVI,0.5,HSPCs,13,3
+scANVI,0.5,HSPCs,14,1
+scANVI,0.5,HSPCs,15,0
+scANVI,0.5,HSPCs,2,0
+scANVI,0.5,HSPCs,3,0
+scANVI,0.5,HSPCs,4,0
+scANVI,0.5,HSPCs,5,1
+scANVI,0.5,HSPCs,6,0
+scANVI,0.5,HSPCs,7,0
+scANVI,0.5,HSPCs,8,127
+scANVI,0.5,HSPCs,9,0
+scANVI,0.5,Megakaryocyte progenitors,0,2
+scANVI,0.5,Megakaryocyte progenitors,1,0
+scANVI,0.5,Megakaryocyte progenitors,10,0
+scANVI,0.5,Megakaryocyte progenitors,11,0
+scANVI,0.5,Megakaryocyte progenitors,12,0
+scANVI,0.5,Megakaryocyte progenitors,13,0
+scANVI,0.5,Megakaryocyte progenitors,14,0
+scANVI,0.5,Megakaryocyte progenitors,15,18
+scANVI,0.5,Megakaryocyte progenitors,2,2
+scANVI,0.5,Megakaryocyte progenitors,3,0
+scANVI,0.5,Megakaryocyte progenitors,4,0
+scANVI,0.5,Megakaryocyte progenitors,5,0
+scANVI,0.5,Megakaryocyte progenitors,6,0
+scANVI,0.5,Megakaryocyte progenitors,7,0
+scANVI,0.5,Megakaryocyte progenitors,8,46
+scANVI,0.5,Megakaryocyte progenitors,9,13
+scANVI,0.5,Monocyte progenitors,0,0
+scANVI,0.5,Monocyte progenitors,1,10
+scANVI,0.5,Monocyte progenitors,10,0
+scANVI,0.5,Monocyte progenitors,11,0
+scANVI,0.5,Monocyte progenitors,12,1
+scANVI,0.5,Monocyte progenitors,13,5
+scANVI,0.5,Monocyte progenitors,14,0
+scANVI,0.5,Monocyte progenitors,15,0
+scANVI,0.5,Monocyte progenitors,2,0
+scANVI,0.5,Monocyte progenitors,3,0
+scANVI,0.5,Monocyte progenitors,4,0
+scANVI,0.5,Monocyte progenitors,5,0
+scANVI,0.5,Monocyte progenitors,6,0
+scANVI,0.5,Monocyte progenitors,7,0
+scANVI,0.5,Monocyte progenitors,8,113
+scANVI,0.5,Monocyte progenitors,9,0
+scANVI,0.5,Monocyte-derived dendritic cells,0,0
+scANVI,0.5,Monocyte-derived dendritic cells,1,13
+scANVI,0.5,Monocyte-derived dendritic cells,10,237
+scANVI,0.5,Monocyte-derived dendritic cells,11,0
+scANVI,0.5,Monocyte-derived dendritic cells,12,1
+scANVI,0.5,Monocyte-derived dendritic cells,13,0
+scANVI,0.5,Monocyte-derived dendritic cells,14,0
+scANVI,0.5,Monocyte-derived dendritic cells,15,0
+scANVI,0.5,Monocyte-derived dendritic cells,2,0
+scANVI,0.5,Monocyte-derived dendritic cells,3,1
+scANVI,0.5,Monocyte-derived dendritic cells,4,0
+scANVI,0.5,Monocyte-derived dendritic cells,5,0
+scANVI,0.5,Monocyte-derived dendritic cells,6,0
+scANVI,0.5,Monocyte-derived dendritic cells,7,51
+scANVI,0.5,Monocyte-derived dendritic cells,8,0
+scANVI,0.5,Monocyte-derived dendritic cells,9,0
+scANVI,0.5,NK cells,0,0
+scANVI,0.5,NK cells,1,0
+scANVI,0.5,NK cells,10,0
+scANVI,0.5,NK cells,11,0
+scANVI,0.5,NK cells,12,0
+scANVI,0.5,NK cells,13,0
+scANVI,0.5,NK cells,14,0
+scANVI,0.5,NK cells,15,0
+scANVI,0.5,NK cells,2,1
+scANVI,0.5,NK cells,3,183
+scANVI,0.5,NK cells,4,1
+scANVI,0.5,NK cells,5,503
+scANVI,0.5,NK cells,6,0
+scANVI,0.5,NK cells,7,0
+scANVI,0.5,NK cells,8,1
+scANVI,0.5,NK cells,9,0
+scANVI,0.5,NKT cells,0,2
+scANVI,0.5,NKT cells,1,0
+scANVI,0.5,NKT cells,10,0
+scANVI,0.5,NKT cells,11,0
+scANVI,0.5,NKT cells,12,0
+scANVI,0.5,NKT cells,13,0
+scANVI,0.5,NKT cells,14,0
+scANVI,0.5,NKT cells,15,0
+scANVI,0.5,NKT cells,2,29
+scANVI,0.5,NKT cells,3,788
+scANVI,0.5,NKT cells,4,2
+scANVI,0.5,NKT cells,5,3
+scANVI,0.5,NKT cells,6,0
+scANVI,0.5,NKT cells,7,0
+scANVI,0.5,NKT cells,8,1
+scANVI,0.5,NKT cells,9,0
+scANVI,0.5,Plasma cells,0,0
+scANVI,0.5,Plasma cells,1,0
+scANVI,0.5,Plasma cells,10,0
+scANVI,0.5,Plasma cells,11,0
+scANVI,0.5,Plasma cells,12,0
+scANVI,0.5,Plasma cells,13,0
+scANVI,0.5,Plasma cells,14,38
+scANVI,0.5,Plasma cells,15,0
+scANVI,0.5,Plasma cells,2,0
+scANVI,0.5,Plasma cells,3,0
+scANVI,0.5,Plasma cells,4,0
+scANVI,0.5,Plasma cells,5,0
+scANVI,0.5,Plasma cells,6,0
+scANVI,0.5,Plasma cells,7,0
+scANVI,0.5,Plasma cells,8,0
+scANVI,0.5,Plasma cells,9,0
+scANVI,0.5,Plasmacytoid dendritic cells,0,0
+scANVI,0.5,Plasmacytoid dendritic cells,1,0
+scANVI,0.5,Plasmacytoid dendritic cells,10,0
+scANVI,0.5,Plasmacytoid dendritic cells,11,0
+scANVI,0.5,Plasmacytoid dendritic cells,12,129
+scANVI,0.5,Plasmacytoid dendritic cells,13,0
+scANVI,0.5,Plasmacytoid dendritic cells,14,0
+scANVI,0.5,Plasmacytoid dendritic cells,15,0
+scANVI,0.5,Plasmacytoid dendritic cells,2,0
+scANVI,0.5,Plasmacytoid dendritic cells,3,0
+scANVI,0.5,Plasmacytoid dendritic cells,4,0
+scANVI,0.5,Plasmacytoid dendritic cells,5,0
+scANVI,0.5,Plasmacytoid dendritic cells,6,0
+scANVI,0.5,Plasmacytoid dendritic cells,7,0
+scANVI,0.5,Plasmacytoid dendritic cells,8,0
+scANVI,0.5,Plasmacytoid dendritic cells,9,0
+scANVI,1.0,CD10+ B cells,0,0
+scANVI,1.0,CD10+ B cells,1,0
+scANVI,1.0,CD10+ B cells,10,0
+scANVI,1.0,CD10+ B cells,11,0
+scANVI,1.0,CD10+ B cells,12,0
+scANVI,1.0,CD10+ B cells,13,0
+scANVI,1.0,CD10+ B cells,14,0
+scANVI,1.0,CD10+ B cells,15,0
+scANVI,1.0,CD10+ B cells,16,0
+scANVI,1.0,CD10+ B cells,17,0
+scANVI,1.0,CD10+ B cells,18,60
+scANVI,1.0,CD10+ B cells,19,0
+scANVI,1.0,CD10+ B cells,2,0
+scANVI,1.0,CD10+ B cells,20,0
+scANVI,1.0,CD10+ B cells,3,0
+scANVI,1.0,CD10+ B cells,4,0
+scANVI,1.0,CD10+ B cells,5,0
+scANVI,1.0,CD10+ B cells,6,0
+scANVI,1.0,CD10+ B cells,7,1
+scANVI,1.0,CD10+ B cells,8,0
+scANVI,1.0,CD10+ B cells,9,0
+scANVI,1.0,CD14+ Monocytes,0,1738
+scANVI,1.0,CD14+ Monocytes,1,0
+scANVI,1.0,CD14+ Monocytes,10,26
+scANVI,1.0,CD14+ Monocytes,11,0
+scANVI,1.0,CD14+ Monocytes,12,22
+scANVI,1.0,CD14+ Monocytes,13,0
+scANVI,1.0,CD14+ Monocytes,14,153
+scANVI,1.0,CD14+ Monocytes,15,0
+scANVI,1.0,CD14+ Monocytes,16,0
+scANVI,1.0,CD14+ Monocytes,17,0
+scANVI,1.0,CD14+ Monocytes,18,0
+scANVI,1.0,CD14+ Monocytes,19,0
+scANVI,1.0,CD14+ Monocytes,2,0
+scANVI,1.0,CD14+ Monocytes,20,0
+scANVI,1.0,CD14+ Monocytes,3,0
+scANVI,1.0,CD14+ Monocytes,4,1
+scANVI,1.0,CD14+ Monocytes,5,0
+scANVI,1.0,CD14+ Monocytes,6,0
+scANVI,1.0,CD14+ Monocytes,7,0
+scANVI,1.0,CD14+ Monocytes,8,0
+scANVI,1.0,CD14+ Monocytes,9,6
+scANVI,1.0,CD16+ Monocytes,0,14
+scANVI,1.0,CD16+ Monocytes,1,0
+scANVI,1.0,CD16+ Monocytes,10,0
+scANVI,1.0,CD16+ Monocytes,11,0
+scANVI,1.0,CD16+ Monocytes,12,0
+scANVI,1.0,CD16+ Monocytes,13,0
+scANVI,1.0,CD16+ Monocytes,14,24
+scANVI,1.0,CD16+ Monocytes,15,0
+scANVI,1.0,CD16+ Monocytes,16,0
+scANVI,1.0,CD16+ Monocytes,17,0
+scANVI,1.0,CD16+ Monocytes,18,0
+scANVI,1.0,CD16+ Monocytes,19,0
+scANVI,1.0,CD16+ Monocytes,2,0
+scANVI,1.0,CD16+ Monocytes,20,0
+scANVI,1.0,CD16+ Monocytes,3,0
+scANVI,1.0,CD16+ Monocytes,4,0
+scANVI,1.0,CD16+ Monocytes,5,1
+scANVI,1.0,CD16+ Monocytes,6,0
+scANVI,1.0,CD16+ Monocytes,7,0
+scANVI,1.0,CD16+ Monocytes,8,0
+scANVI,1.0,CD16+ Monocytes,9,259
+scANVI,1.0,CD20+ B cells,0,0
+scANVI,1.0,CD20+ B cells,1,0
+scANVI,1.0,CD20+ B cells,10,0
+scANVI,1.0,CD20+ B cells,11,0
+scANVI,1.0,CD20+ B cells,12,0
+scANVI,1.0,CD20+ B cells,13,0
+scANVI,1.0,CD20+ B cells,14,0
+scANVI,1.0,CD20+ B cells,15,0
+scANVI,1.0,CD20+ B cells,16,0
+scANVI,1.0,CD20+ B cells,17,0
+scANVI,1.0,CD20+ B cells,18,0
+scANVI,1.0,CD20+ B cells,19,0
+scANVI,1.0,CD20+ B cells,2,0
+scANVI,1.0,CD20+ B cells,20,0
+scANVI,1.0,CD20+ B cells,3,1
+scANVI,1.0,CD20+ B cells,4,0
+scANVI,1.0,CD20+ B cells,5,8
+scANVI,1.0,CD20+ B cells,6,0
+scANVI,1.0,CD20+ B cells,7,468
+scANVI,1.0,CD20+ B cells,8,385
+scANVI,1.0,CD20+ B cells,9,0
+scANVI,1.0,CD4+ T cells,0,0
+scANVI,1.0,CD4+ T cells,1,1619
+scANVI,1.0,CD4+ T cells,10,0
+scANVI,1.0,CD4+ T cells,11,0
+scANVI,1.0,CD4+ T cells,12,0
+scANVI,1.0,CD4+ T cells,13,0
+scANVI,1.0,CD4+ T cells,14,0
+scANVI,1.0,CD4+ T cells,15,0
+scANVI,1.0,CD4+ T cells,16,108
+scANVI,1.0,CD4+ T cells,17,0
+scANVI,1.0,CD4+ T cells,18,0
+scANVI,1.0,CD4+ T cells,19,0
+scANVI,1.0,CD4+ T cells,2,1400
+scANVI,1.0,CD4+ T cells,20,12
+scANVI,1.0,CD4+ T cells,3,87
+scANVI,1.0,CD4+ T cells,4,63
+scANVI,1.0,CD4+ T cells,5,0
+scANVI,1.0,CD4+ T cells,6,13
+scANVI,1.0,CD4+ T cells,7,0
+scANVI,1.0,CD4+ T cells,8,1
+scANVI,1.0,CD4+ T cells,9,0
+scANVI,1.0,CD8+ T cells,0,0
+scANVI,1.0,CD8+ T cells,1,86
+scANVI,1.0,CD8+ T cells,10,1
+scANVI,1.0,CD8+ T cells,11,0
+scANVI,1.0,CD8+ T cells,12,0
+scANVI,1.0,CD8+ T cells,13,0
+scANVI,1.0,CD8+ T cells,14,0
+scANVI,1.0,CD8+ T cells,15,0
+scANVI,1.0,CD8+ T cells,16,0
+scANVI,1.0,CD8+ T cells,17,0
+scANVI,1.0,CD8+ T cells,18,0
+scANVI,1.0,CD8+ T cells,19,0
+scANVI,1.0,CD8+ T cells,2,4
+scANVI,1.0,CD8+ T cells,20,0
+scANVI,1.0,CD8+ T cells,3,553
+scANVI,1.0,CD8+ T cells,4,11
+scANVI,1.0,CD8+ T cells,5,0
+scANVI,1.0,CD8+ T cells,6,0
+scANVI,1.0,CD8+ T cells,7,0
+scANVI,1.0,CD8+ T cells,8,0
+scANVI,1.0,CD8+ T cells,9,0
+scANVI,1.0,Erythrocytes,0,0
+scANVI,1.0,Erythrocytes,1,0
+scANVI,1.0,Erythrocytes,10,0
+scANVI,1.0,Erythrocytes,11,131
+scANVI,1.0,Erythrocytes,12,0
+scANVI,1.0,Erythrocytes,13,218
+scANVI,1.0,Erythrocytes,14,0
+scANVI,1.0,Erythrocytes,15,0
+scANVI,1.0,Erythrocytes,16,0
+scANVI,1.0,Erythrocytes,17,102
+scANVI,1.0,Erythrocytes,18,0
+scANVI,1.0,Erythrocytes,19,0
+scANVI,1.0,Erythrocytes,2,0
+scANVI,1.0,Erythrocytes,20,0
+scANVI,1.0,Erythrocytes,3,0
+scANVI,1.0,Erythrocytes,4,0
+scANVI,1.0,Erythrocytes,5,0
+scANVI,1.0,Erythrocytes,6,0
+scANVI,1.0,Erythrocytes,7,0
+scANVI,1.0,Erythrocytes,8,0
+scANVI,1.0,Erythrocytes,9,0
+scANVI,1.0,Erythroid progenitors,0,0
+scANVI,1.0,Erythroid progenitors,1,0
+scANVI,1.0,Erythroid progenitors,10,0
+scANVI,1.0,Erythroid progenitors,11,135
+scANVI,1.0,Erythroid progenitors,12,0
+scANVI,1.0,Erythroid progenitors,13,0
+scANVI,1.0,Erythroid progenitors,14,0
+scANVI,1.0,Erythroid progenitors,15,0
+scANVI,1.0,Erythroid progenitors,16,0
+scANVI,1.0,Erythroid progenitors,17,1
+scANVI,1.0,Erythroid progenitors,18,1
+scANVI,1.0,Erythroid progenitors,19,0
+scANVI,1.0,Erythroid progenitors,2,0
+scANVI,1.0,Erythroid progenitors,20,0
+scANVI,1.0,Erythroid progenitors,3,2
+scANVI,1.0,Erythroid progenitors,4,0
+scANVI,1.0,Erythroid progenitors,5,0
+scANVI,1.0,Erythroid progenitors,6,0
+scANVI,1.0,Erythroid progenitors,7,1
+scANVI,1.0,Erythroid progenitors,8,0
+scANVI,1.0,Erythroid progenitors,9,0
+scANVI,1.0,HSPCs,0,1
+scANVI,1.0,HSPCs,1,0
+scANVI,1.0,HSPCs,10,127
+scANVI,1.0,HSPCs,11,0
+scANVI,1.0,HSPCs,12,0
+scANVI,1.0,HSPCs,13,0
+scANVI,1.0,HSPCs,14,0
+scANVI,1.0,HSPCs,15,9
+scANVI,1.0,HSPCs,16,0
+scANVI,1.0,HSPCs,17,0
+scANVI,1.0,HSPCs,18,3
+scANVI,1.0,HSPCs,19,1
+scANVI,1.0,HSPCs,2,0
+scANVI,1.0,HSPCs,20,0
+scANVI,1.0,HSPCs,3,0
+scANVI,1.0,HSPCs,4,0
+scANVI,1.0,HSPCs,5,1
+scANVI,1.0,HSPCs,6,0
+scANVI,1.0,HSPCs,7,0
+scANVI,1.0,HSPCs,8,0
+scANVI,1.0,HSPCs,9,0
+scANVI,1.0,Megakaryocyte progenitors,0,0
+scANVI,1.0,Megakaryocyte progenitors,1,0
+scANVI,1.0,Megakaryocyte progenitors,10,46
+scANVI,1.0,Megakaryocyte progenitors,11,13
+scANVI,1.0,Megakaryocyte progenitors,12,0
+scANVI,1.0,Megakaryocyte progenitors,13,0
+scANVI,1.0,Megakaryocyte progenitors,14,0
+scANVI,1.0,Megakaryocyte progenitors,15,0
+scANVI,1.0,Megakaryocyte progenitors,16,2
+scANVI,1.0,Megakaryocyte progenitors,17,0
+scANVI,1.0,Megakaryocyte progenitors,18,0
+scANVI,1.0,Megakaryocyte progenitors,19,0
+scANVI,1.0,Megakaryocyte progenitors,2,0
+scANVI,1.0,Megakaryocyte progenitors,20,18
+scANVI,1.0,Megakaryocyte progenitors,3,2
+scANVI,1.0,Megakaryocyte progenitors,4,0
+scANVI,1.0,Megakaryocyte progenitors,5,0
+scANVI,1.0,Megakaryocyte progenitors,6,0
+scANVI,1.0,Megakaryocyte progenitors,7,0
+scANVI,1.0,Megakaryocyte progenitors,8,0
+scANVI,1.0,Megakaryocyte progenitors,9,0
+scANVI,1.0,Monocyte progenitors,0,9
+scANVI,1.0,Monocyte progenitors,1,0
+scANVI,1.0,Monocyte progenitors,10,114
+scANVI,1.0,Monocyte progenitors,11,0
+scANVI,1.0,Monocyte progenitors,12,0
+scANVI,1.0,Monocyte progenitors,13,0
+scANVI,1.0,Monocyte progenitors,14,0
+scANVI,1.0,Monocyte progenitors,15,1
+scANVI,1.0,Monocyte progenitors,16,0
+scANVI,1.0,Monocyte progenitors,17,0
+scANVI,1.0,Monocyte progenitors,18,5
+scANVI,1.0,Monocyte progenitors,19,0
+scANVI,1.0,Monocyte progenitors,2,0
+scANVI,1.0,Monocyte progenitors,20,0
+scANVI,1.0,Monocyte progenitors,3,0
+scANVI,1.0,Monocyte progenitors,4,0
+scANVI,1.0,Monocyte progenitors,5,0
+scANVI,1.0,Monocyte progenitors,6,0
+scANVI,1.0,Monocyte progenitors,7,0
+scANVI,1.0,Monocyte progenitors,8,0
+scANVI,1.0,Monocyte progenitors,9,0
+scANVI,1.0,Monocyte-derived dendritic cells,0,7
+scANVI,1.0,Monocyte-derived dendritic cells,1,0
+scANVI,1.0,Monocyte-derived dendritic cells,10,0
+scANVI,1.0,Monocyte-derived dendritic cells,11,0
+scANVI,1.0,Monocyte-derived dendritic cells,12,243
+scANVI,1.0,Monocyte-derived dendritic cells,13,0
+scANVI,1.0,Monocyte-derived dendritic cells,14,0
+scANVI,1.0,Monocyte-derived dendritic cells,15,1
+scANVI,1.0,Monocyte-derived dendritic cells,16,0
+scANVI,1.0,Monocyte-derived dendritic cells,17,0
+scANVI,1.0,Monocyte-derived dendritic cells,18,0
+scANVI,1.0,Monocyte-derived dendritic cells,19,0
+scANVI,1.0,Monocyte-derived dendritic cells,2,0
+scANVI,1.0,Monocyte-derived dendritic cells,20,0
+scANVI,1.0,Monocyte-derived dendritic cells,3,0
+scANVI,1.0,Monocyte-derived dendritic cells,4,1
+scANVI,1.0,Monocyte-derived dendritic cells,5,0
+scANVI,1.0,Monocyte-derived dendritic cells,6,0
+scANVI,1.0,Monocyte-derived dendritic cells,7,0
+scANVI,1.0,Monocyte-derived dendritic cells,8,0
+scANVI,1.0,Monocyte-derived dendritic cells,9,51
+scANVI,1.0,NK cells,0,0
+scANVI,1.0,NK cells,1,0
+scANVI,1.0,NK cells,10,1
+scANVI,1.0,NK cells,11,0
+scANVI,1.0,NK cells,12,0
+scANVI,1.0,NK cells,13,0
+scANVI,1.0,NK cells,14,0
+scANVI,1.0,NK cells,15,0
+scANVI,1.0,NK cells,16,0
+scANVI,1.0,NK cells,17,0
+scANVI,1.0,NK cells,18,0
+scANVI,1.0,NK cells,19,0
+scANVI,1.0,NK cells,2,1
+scANVI,1.0,NK cells,20,1
+scANVI,1.0,NK cells,3,0
+scANVI,1.0,NK cells,4,23
+scANVI,1.0,NK cells,5,508
+scANVI,1.0,NK cells,6,155
+scANVI,1.0,NK cells,7,0
+scANVI,1.0,NK cells,8,0
+scANVI,1.0,NK cells,9,0
+scANVI,1.0,NKT cells,0,0
+scANVI,1.0,NKT cells,1,0
+scANVI,1.0,NKT cells,10,1
+scANVI,1.0,NKT cells,11,0
+scANVI,1.0,NKT cells,12,0
+scANVI,1.0,NKT cells,13,0
+scANVI,1.0,NKT cells,14,0
+scANVI,1.0,NKT cells,15,0
+scANVI,1.0,NKT cells,16,3
+scANVI,1.0,NKT cells,17,0
+scANVI,1.0,NKT cells,18,0
+scANVI,1.0,NKT cells,19,0
+scANVI,1.0,NKT cells,2,22
+scANVI,1.0,NKT cells,20,0
+scANVI,1.0,NKT cells,3,2
+scANVI,1.0,NKT cells,4,470
+scANVI,1.0,NKT cells,5,5
+scANVI,1.0,NKT cells,6,320
+scANVI,1.0,NKT cells,7,0
+scANVI,1.0,NKT cells,8,2
+scANVI,1.0,NKT cells,9,0
+scANVI,1.0,Plasma cells,0,0
+scANVI,1.0,Plasma cells,1,0
+scANVI,1.0,Plasma cells,10,0
+scANVI,1.0,Plasma cells,11,0
+scANVI,1.0,Plasma cells,12,0
+scANVI,1.0,Plasma cells,13,0
+scANVI,1.0,Plasma cells,14,0
+scANVI,1.0,Plasma cells,15,0
+scANVI,1.0,Plasma cells,16,0
+scANVI,1.0,Plasma cells,17,0
+scANVI,1.0,Plasma cells,18,0
+scANVI,1.0,Plasma cells,19,38
+scANVI,1.0,Plasma cells,2,0
+scANVI,1.0,Plasma cells,20,0
+scANVI,1.0,Plasma cells,3,0
+scANVI,1.0,Plasma cells,4,0
+scANVI,1.0,Plasma cells,5,0
+scANVI,1.0,Plasma cells,6,0
+scANVI,1.0,Plasma cells,7,0
+scANVI,1.0,Plasma cells,8,0
+scANVI,1.0,Plasma cells,9,0
+scANVI,1.0,Plasmacytoid dendritic cells,0,0
+scANVI,1.0,Plasmacytoid dendritic cells,1,0
+scANVI,1.0,Plasmacytoid dendritic cells,10,0
+scANVI,1.0,Plasmacytoid dendritic cells,11,0
+scANVI,1.0,Plasmacytoid dendritic cells,12,0
+scANVI,1.0,Plasmacytoid dendritic cells,13,0
+scANVI,1.0,Plasmacytoid dendritic cells,14,0
+scANVI,1.0,Plasmacytoid dendritic cells,15,129
+scANVI,1.0,Plasmacytoid dendritic cells,16,0
+scANVI,1.0,Plasmacytoid dendritic cells,17,0
+scANVI,1.0,Plasmacytoid dendritic cells,18,0
+scANVI,1.0,Plasmacytoid dendritic cells,19,0
+scANVI,1.0,Plasmacytoid dendritic cells,2,0
+scANVI,1.0,Plasmacytoid dendritic cells,20,0
+scANVI,1.0,Plasmacytoid dendritic cells,3,0
+scANVI,1.0,Plasmacytoid dendritic cells,4,0
+scANVI,1.0,Plasmacytoid dendritic cells,5,0
+scANVI,1.0,Plasmacytoid dendritic cells,6,0
+scANVI,1.0,Plasmacytoid dendritic cells,7,0
+scANVI,1.0,Plasmacytoid dendritic cells,8,0
+scANVI,1.0,Plasmacytoid dendritic cells,9,0

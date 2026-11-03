@@ -580,12 +580,8 @@ class BenchmarkResolutionExperiment(BaseExperiment):
                 'test_transformed': test_copy
             }
 
-        except ImportError:
-            self.logger.warning("scVI not available, using mock baseline")
-            return self._create_mock_baseline(test_data, 'scvi')
-        except Exception as e:
-            self.logger.warning(f"scVI baseline failed: {e}, using mock results")
-            return self._create_mock_baseline(test_data, 'scvi')
+        except Exception as exc:
+            raise RuntimeError("scVI baseline failed. Check the benchmark dependencies and input.") from exc
 
     def run_seurat_baseline(self, train_data: sc.AnnData,
                             test_data: sc.AnnData) -> Dict[str, Any]:
@@ -648,9 +644,8 @@ class BenchmarkResolutionExperiment(BaseExperiment):
                 'test_transformed': test_copy
             }
 
-        except Exception as e:
-            self.logger.warning(f"Seurat baseline failed: {e}, using mock results")
-            return self._create_mock_baseline(test_data, 'seurat')
+        except Exception as exc:
+            raise RuntimeError("The Seurat-style PCA baseline failed.") from exc
 
     def run_harmony_baseline(self, train_data: sc.AnnData,
                              test_data: sc.AnnData) -> Dict[str, Any]:
@@ -661,9 +656,6 @@ class BenchmarkResolutionExperiment(BaseExperiment):
         self.logger.info("Running Harmony baseline...")
 
         try:
-            import harmony
-            # Or: from harmony import harmonize
-
             # Harmony requires PCA input
             combined_data = sc.concat([train_data, test_data])
             combined_data.obs['split'] = ['train'] * train_data.n_obs + ['test'] * test_data.n_obs
@@ -672,19 +664,10 @@ class BenchmarkResolutionExperiment(BaseExperiment):
             sc.pp.scale(combined_data, max_value=10)
             sc.tl.pca(combined_data, n_comps=50, random_state=42)
 
-            # Run Harmony
-            # Note: using scanpy external interface or harmony-pytorch
-            # For generality, demonstrate using scanpy external interface (requires pip install scanpy[external])
-            # If unavailable, use harmony-pytorch manually
-            try:
-                sc.external.pp.harmony_integrate(combined_data, key=self.batch_column, basis='X_pca', adjusted_basis='X_harmony')
-            except:
-                # Fallback to harmony-pytorch if scanpy external is not set up
-                from harmony import harmonize
-                Z = combined_data.obsm['X_pca']
-                batch_mat = pd.get_dummies(combined_data.obs[self.batch_column])
-                Z_corr = harmonize(Z, combined_data.obs, batch_key=self.batch_column)
-                combined_data.obsm['X_harmony'] = Z_corr
+            sc.external.pp.harmony_integrate(
+                combined_data, key=self.batch_column, basis="X_pca", adjusted_basis="X_harmony",
+                random_state=42,
+            )
 
             # Split back to test set
             test_mask = combined_data.obs['split'] == 'test'
@@ -716,31 +699,8 @@ class BenchmarkResolutionExperiment(BaseExperiment):
                 'test_transformed': test_copy
             }
 
-        except Exception as e:
-            self.logger.warning(f"Harmony baseline failed: {e}, skipping.")
-            return self._create_mock_baseline(test_data, 'Harmony')
-
-    def _create_mock_baseline(self, test_data: sc.AnnData, method_name: str) -> Dict[str, Any]:
-        """Create mock baseline results when real methods fail."""
-        n_test = test_data.n_obs
-        mock_embeddings = np.random.randn(n_test, 30)
-        mock_predictions = np.random.choice(self.target_subtypes, size=n_test)
-
-        # Create mock test_transformed with neighbor graph
-        test_copy = test_data.copy()
-        test_copy.obsm[f'X_{method_name}'] = mock_embeddings
-
-        # Ensure we have the required columns for LISI calculation
-        test_copy.obs[self.cell_type_column] = test_data.obs[self.cell_type_column].copy()
-        test_copy.obs[self.batch_column] = test_data.obs[self.batch_column].copy()
-
-        sc.pp.neighbors(test_copy, use_rep=f'X_{method_name}', n_neighbors=self.n_neighbors)
-
-        return {
-            'embeddings': mock_embeddings,
-            'predictions': mock_predictions,
-            'test_transformed': test_copy
-        }
+        except Exception as exc:
+            raise RuntimeError("Harmony baseline failed. Install the benchmark extra and check the input.") from exc
 
     def _compute_lisi_score(self, adata: sc.AnnData, key: str,
                             metric_type: str, k: int) -> float:

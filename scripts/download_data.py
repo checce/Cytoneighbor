@@ -27,8 +27,8 @@ def fingerprint(path):
     return digest.hexdigest()
 
 
-def download(name, expected):
-    destination = DATA_DIR / name
+def download(name, expected, data_dir):
+    destination = data_dir / name
     if destination.is_file():
         print(f"Exists: {name}. Use --verify to compare it with the study input.")
         return True
@@ -42,7 +42,7 @@ def download(name, expected):
         return False
 
     # Check the input before putting it at the path consumed by experiments.
-    with tempfile.TemporaryDirectory(prefix=".download-", dir=DATA_DIR) as temp:
+    with tempfile.TemporaryDirectory(prefix=".download-", dir=data_dir) as temp:
         partial = Path(temp) / name
         try:
             gdown.download(id=FILE_IDS[name], output=str(partial))
@@ -68,12 +68,13 @@ def main():
     mode.add_argument("--list", action="store_true", help="Show local and public availability")
     mode.add_argument("--verify", action="store_true", help="Verify local files by SHA-256")
     parser.add_argument("--file", choices=FILE_IDS, help="Use a single exact filename")
+    parser.add_argument("--data-dir", type=Path, default=DATA_DIR, help="Local input directory")
     args = parser.parse_args()
     names = [args.file] if args.file else list(FILE_IDS)
     print(f"Dataset folder: {FOLDER}\n")
     if args.list:
         for name in names:
-            local = "present" if (DATA_DIR / name).is_file() else "missing"
+            local = "present" if (args.data_dir / name).is_file() else "missing"
             public = "linked" if FILE_IDS[name] else "not linked"
             print(f"{name}: {local} locally, {public} on Drive")
         return 0
@@ -83,7 +84,7 @@ def main():
     if args.verify:
         ok = True
         for name in names:
-            path = DATA_DIR / name
+            path = args.data_dir / name
             expected = checksums[name]
             matches = (path.is_file() and path.stat().st_size == int(expected["Bytes"])
                        and fingerprint(path) == expected["SHA256"])
@@ -97,7 +98,8 @@ def main():
         if missing_links:
             print("No public download link for: " + ", ".join(missing_links))
         names = [name for name in names if FILE_IDS[name]]
-    results = [download(name, checksums[name]) for name in names]
+    args.data_dir.mkdir(parents=True, exist_ok=True)
+    results = [download(name, checksums[name], args.data_dir) for name in names]
     if not all(results):
         print(f"See data/README.md for manual download instructions and expected checksums.")
     return 0 if all(results) else 1

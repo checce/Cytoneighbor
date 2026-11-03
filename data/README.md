@@ -41,6 +41,7 @@ Run the helper without `--file` to download the currently linked study
 inputs. If Drive rate-limits the helper, download the files through the
 folder in your browser and run `--verify`. The
 [input checksums](input-checksums.csv) record the exact study copies.
+Use `--data-dir /path/to/data` to download to or verify a different directory.
 Follow the [reproduction guide](../repro/) for the next step.
 
 ## Data attribution

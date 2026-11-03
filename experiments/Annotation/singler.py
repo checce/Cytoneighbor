@@ -3,6 +3,7 @@ import scanpy as sc
 import numpy as np
 import pandas as pd
 import os
+from pathlib import Path
 import sys
 import warnings
 import gc
@@ -22,11 +23,12 @@ def main():
     print("--- SingleR Cross-Validation Script ---")
     warnings.filterwarnings('ignore')
 
-    base_project_dir = "E:/Project/Work2"
-    single_full_h5ad_input = os.path.join(base_project_dir, 'Cell_datasets', 'Zebrafish embryonic cells.h5ad')
+    base_project_dir = Path(__file__).resolve().parents[2]
+    single_full_h5ad_input = os.environ.get(
+        "CYTONEIGHBOR_DATA", str(base_project_dir / "data" / "Zebrafish embryonic cells.h5ad"))
     BATCH_KEY = 'batch'
     CELL_TYPE_KEY = 'cell_type'
-    R_SCRIPT_PATH = os.path.join(base_project_dir, 'NetWork', 'run_singler.R')
+    R_SCRIPT_PATH = str(Path(__file__).resolve().parent / "NetWork" / "run_singler.R")
     dataset_name = os.path.splitext(os.path.basename(single_full_h5ad_input))[0].replace(" ", "_")
     singler_cv_results_dir = os.path.join(base_project_dir, "CV_SingleR_Results", dataset_name)
     os.makedirs(singler_cv_results_dir, exist_ok=True)
@@ -88,7 +90,7 @@ def main():
                 }
                 all_results.append(metrics)
 
-    print("Warning: missing rpy2")
+            except Exception as e:
                 logger.error(f"Deal Fold {query_batch_id}  failed: {e}", exc_info=True)
 
     if all_results:
@@ -98,6 +100,5 @@ def main():
         summary_df = pd.concat([results_df, mean_row, std_row])
         summary_df.to_csv(os.path.join(singler_cv_results_dir, f"{dataset_name}_summary.csv"))
         logger.info("SingleR evaluation complete.")
-    print("Warning: import error")
 if __name__ == '__main__':
     main()
