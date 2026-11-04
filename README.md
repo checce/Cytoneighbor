@@ -105,7 +105,7 @@ No data download is required — the sanity check generates mock data in memory.
 import scanpy as sc
 import cytoneighbor as cn
 
-# 1. Load your data (any AnnData-compatible format)
+# 1. Load reference and query AnnData files
 ref  = sc.read_h5ad("reference.h5ad")    # well-annotated reference
 qry  = sc.read_h5ad("query.h5ad")        # your query to annotate
 
@@ -127,16 +127,13 @@ Try the [annotation tutorial](tutorials/tutorial_annotation.ipynb) with syntheti
 ```python
 import cytoneighbor as cn
 
-# --- One-liner for the most common use case ---
-result = cn.quick_annotate(ref, "cell_type", query)
-
-# --- Step-by-step for full control ---
+# Alternative to the one-call example above. Reuse ref and qry from Quick Start.
 cn.load_data(ref, data=ref.X, labels=ref.obs["cell_type"].to_numpy())
 cn.fit(ref)
 cn.transform(ref, n_neighbors=15)
-cn.annotate(ref, "cell_type", query, enable_unknown=True)
+cn.annotate(ref, "cell_type", qry, enable_unknown=True)
 
-# --- Save and load trained models ---
+# --- Save or load a trained model ---
 cn.save_model(ref, "my_model.zip")
 cn.load_model(ref, "my_model.zip")
 ```
@@ -188,6 +185,7 @@ When `enable_unknown=True`, Cytoneighbor writes diagnostic columns to
 | `cytoneighbor_confidence` | Top-class preference score (0–1) |
 | `cytoneighbor_margin` | Gap between the two highest class preference scores |
 | `cytoneighbor_norm_entropy` | Normalised prediction entropy (0–1) |
+| `cytoneighbor_top1_sim` | Strongest retained pairwise score (0–1) |
 | `cytoneighbor_is_unknown` | Whether the query was retained as Unknown |
 
 Treat *Unknown* as a deferral for review. Default thresholds
@@ -198,10 +196,11 @@ labels deferred before transferring the rule to a new dataset.
 ### &#128225; Batch Integration with Neighbor Graphs
 
 Build a graph across batches and evaluate cell type structure alongside batch
-mixing. In the shared immune query pool, Cytoneighbor showed higher aggregate
-graph clustering agreement than scANVI, while some types had lower cluster
-purity and scANVI transferred labels more accurately. The study reports these
-endpoints separately.
+mixing. The example below uses cell type labels during training. In the
+supervised immune benchmark, feature selection used the full input and the
+query batches were represented during fitting. Cytoneighbor had higher
+aggregate graph clustering agreement with annotated cell types, while some
+types had lower cluster purity and scANVI transferred labels more accurately.
 
 ```python
 import cytoneighbor as cn
@@ -210,7 +209,7 @@ import scanpy as sc
 # 1. Load multi-batch data
 adata = sc.read_h5ad("your_multi_batch_data.h5ad")
 
-# 2. Standard preprocessing
+# 2. Preprocess raw counts. Skip normalization and log1p if already applied.
 sc.pp.normalize_total(adata, target_sum=1e4)
 sc.pp.log1p(adata)
 sc.pp.highly_variable_genes(adata, n_top_genes=3000, batch_key="your_batch_column", subset=True)
@@ -226,8 +225,8 @@ sc.tl.leiden(adata, neighbors_key="neighbors")         # clustering, install .[d
 sc.tl.rank_genes_groups(adata, groupby="leiden")       # marker detection
 
 # 5. Evaluate integration quality
-# Compare batch mixing (iLISI) and cell-type purity (cLISI)
-# against uncorrected baseline — see tutorials for full example
+# Compare local batch mixing (iLISI) and local label diversity (cLISI)
+# against a PCA neighbor graph — see tutorials for full example
 ```
 
 Pass `neighbors_key="neighbors"` to Scanpy to use the Cytoneighbor graph.

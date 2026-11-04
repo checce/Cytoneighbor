@@ -1013,12 +1013,8 @@ class DiseaseDiscoveryExperiment:
                                 f"{val:.3f}", ha="center", va="bottom", fontsize=7,
                             )
 
-                status = ("SUPPORTED" if results.get("s3_enrichment_confirmed")
-                          else ("NOT SUPPORTED" if results.get("s3_enrichment_confirmed") is False
-                                else "MARKER ABSENT"))
                 fig.suptitle(
-                    f"Zonation Validation: S1/S2-like vs S3-like\n"
-                    f"SLC5A1 ({zm}) enrichment in S3-like: {status}",
+                    "Descriptive Marker Expression in Inferred PT States",
                     fontsize=10, fontweight="bold",
                 )
                 plt.tight_layout()
@@ -1268,7 +1264,7 @@ class DiseaseDiscoveryExperiment:
                         ha="center", va="bottom", fontsize=8,
                     )
 
-                # Significance bracket
+                # Unadjusted cell-level p-value
                 y_top = max(h_val, d_val) * 1.18
                 ax.plot(
                     [0, 0, 1, 1],
@@ -1277,10 +1273,9 @@ class DiseaseDiscoveryExperiment:
                 )
                 if not np.isnan(pval):
                     sig_txt = (
-                        f"p={pval:.3f}" if pval >= 0.001
-                        else "p<0.001"
+                        f"cell-level p={pval:.3f}" if pval >= 0.001
+                        else "cell-level p<0.001"
                     )
-                    sig_txt += "  significant" if pval < 0.05 else "  n.s."
                 else:
                     sig_txt = "test failed"
                 ax.text(
@@ -1717,26 +1712,11 @@ class DiseaseDiscoveryExperiment:
         characterization: Dict[str, Any],
         output_dir: str,
     ) -> None:
-        """
-        GO Biological Process enrichment for S1/S2-like and Injured PT clusters.
+        """Summarize GO terms for the original inferred S1/S2-like and injured PT states.
 
-        Filter pipeline (strict, publication-grade)
-        -------------------------------------------
-        1. Remove ambient/structural noise genes:
-           MT-*, RPS*, RPL*, MALAT1, NEAT1, RN7S*
-           These are statistically significant in injured cells only because
-           total-RNA collapse makes them appear relatively upregulated.
-        2. pvals_adj < 0.01  (stricter than default 0.05)
-        3. logfoldchanges > 1.0  (鈮?2脳 fold-change; biologically meaningful)
-        4. Sort by logfoldchanges DESC to prioritise strongest signals.
-        5. Minimum 10 genes required per group (conservative guard).
-
-        Clusters analysed
-        -----------------
-        "Functional PT (S1/S2-like)" vs "Injured PT"
-        The S3-like cluster is not analysed by GO because its transcriptomic
-        distinction from S1/S2-like is subtle (8% SLC5A2 difference) and GO
-        enrichment on small fold-changes would lack biological specificity.
+        The workflow filters predefined gene groups and applies the recorded
+        differential-expression thresholds before enrichment. The resulting
+        terms describe the selected cell groups and gene lists.
         """
         if not _GSEAPY_AVAILABLE:
             self.logger.warning(

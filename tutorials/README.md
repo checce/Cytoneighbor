@@ -27,7 +27,7 @@ present in the reference.
 - Build a Cytoneighbor neighbour graph across multiple batches
 - Visualize integration quality (batch mixing vs. cell-type separation)
 - Run downstream analysis (clustering, marker detection) using the graph
-- Evaluate batch correction against a raw baseline
+- Compare graph results with a PCA neighbor baseline
 - Adapt the workflow to your own multi-batch data
 
 **Best for:** Users integrating data from multiple donors, experiments, or
