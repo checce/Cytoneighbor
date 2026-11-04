@@ -492,7 +492,7 @@ class SymRelEnc(nn.Module):
         logits = self.forward_pair_logits(xa_rep.reshape(-1,G), xb.reshape(-1,G), amp_dtype=amp_dtype)
         return logits.reshape(B,K)
 
-# -------------------- Gene-CutMix Data Synthesis --------------------
+# -------------------- gene-level mixing Data Synthesis --------------------
 def _contiguous_slices(G: int, parts: List[float]) -> List[slice]:
     """Divide [0, G) into contiguous segments by ratio, return slice list"""
     parts = np.asarray(parts, np.float32); parts = parts / max(1e-8, parts.sum())
@@ -610,7 +610,7 @@ def _filter_synth_by_ann(S: np.ndarray, cls: int, donor: str, *,
         return np.ones(S.shape[0], dtype=bool)
     return dist <= thr
 
-# ========== Synthesis Toolkit (Same-Donor Same-Type Gene-CutMix + Radius/Margin Thresholds) ==========
+# ========== Synthesis Toolkit (Same-Donor Same-Type gene-level mixing + Radius/Margin Thresholds) ==========
 
 def _class_centers_R(R: np.ndarray, y: np.ndarray) -> Dict[int, np.ndarray]:
     centers = {}
@@ -1088,7 +1088,7 @@ def _eval_pairs(model, X_t, a, b, y, device, batch=2048, amp_dtype: str = "auto"
 #         if cur_val is None: raise RuntimeError("Validation set too small, cannot construct validation pairs.")
 #         a_va, b_va, l_va = cur_val
 
-#     _log("==================== Training: SymRelEnc (+ Dynamic Gene-CutMix) ====================")
+#     _log("==================== Training: SymRelEnc (+ Dynamic Gene-Level Mixing) ====================")
 #     bce_logits = nn.BCEWithLogitsLoss(reduction='none')
 #     pos_smooth = float(1.0 - label_smoothing); neg_smooth = float(label_smoothing)
 #     softplus = nn.Softplus()
@@ -1697,7 +1697,7 @@ def fit(adata: ad.AnnData,
         if cur_val is None: raise RuntimeError("Validation set too small, cannot construct validation pairs.")
         a_va, b_va, l_va = cur_val
 
-    _log("==================== Training: SymRelEnc (+ Dynamic Gene-CutMix) ====================")
+    _log("==================== Training: SymRelEnc (+ Dynamic Gene-Level Mixing) ====================")
     bce_logits = nn.BCEWithLogitsLoss(reduction='none')
     pos_smooth = float(1.0 - label_smoothing); neg_smooth = float(label_smoothing)
     softplus = nn.Softplus()

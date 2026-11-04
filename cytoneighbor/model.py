@@ -942,7 +942,7 @@ class SymRelEnc(nn.Module):
 
 
 
-# -------------------- Gene-CutMix Data Synthesis --------------------
+# -------------------- gene-level mixing Data Synthesis --------------------
 
 def _contiguous_slices(G: int, parts: List[float]) -> List[slice]:
 
@@ -1178,7 +1178,7 @@ def _filter_synth_by_ann(S: np.ndarray, cls: int, donor: str, *,
 
 
 
-# ========== Synthesis Toolkit (Same-Donor Same-Type Gene-CutMix + Radius/Margin Thresholds) ==========
+# ========== Synthesis Toolkit (Same-Donor Same-Type gene-level mixing + Radius/Margin Thresholds) ==========
 
 
 
@@ -2134,7 +2134,7 @@ def _eval_pairs(model, X_t, a, b, y, device, batch=2048, amp_dtype: str = "auto"
 
 
 
-#     _log("==================== Training: SymRelEnc (+ Dynamic Gene-CutMix) ====================")
+#     _log("==================== Training: SymRelEnc (+ Dynamic Gene-Level Mixing) ====================")
 
 #     bce_logits = nn.BCEWithLogitsLoss(reduction='none')
 
@@ -3352,7 +3352,7 @@ def fit(adata: ad.AnnData,
 
 
 
-    _log("==================== Training: SymRelEnc (+ Dynamic Gene-CutMix) ====================")
+    _log("==================== Training: SymRelEnc (+ Dynamic Gene-Level Mixing) ====================")
 
     bce_logits = nn.BCEWithLogitsLoss(reduction='none')
 

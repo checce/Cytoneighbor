@@ -29,7 +29,7 @@ def replay_rank_endpoints(tables):
             check_close(int(row[f"query_hits_at_{k}"]) / n, expected[f"query_hit_at_{k}"], "query hit")
             check_close(delta_hits / (n * ref), expected[f"mean_reference_fraction_at_{k}"], "reference recall")
             check_close(delta_hits / (n * k), expected[f"mean_delta_fraction_at_{k}"], "neighbour fraction")
-    print(f"Gene-CutMix: all final-rank endpoints reproduced for {len(published)} runs.")
+    print(f"gene-level mixing: all final-rank endpoints reproduced for {len(published)} runs.")
 
 
 def replay_donor_permutations(tables):

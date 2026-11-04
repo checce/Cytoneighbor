@@ -105,7 +105,7 @@ class CytoneighborWrapper:
         Args:
             adata: AnnData object containing training data
             cell_type_column: Column name containing cell type labels
-            synthesis_enabled: Whether to enable Gene-CutMix synthesis
+            synthesis_enabled: Whether to enable gene-level mixing synthesis
             model_save_path: Path to save/load the model
             **synthesis_params: Additional synthesis parameters (synth_mult_per_dt, synth_cap_per_dt, etc.)
         """
@@ -289,7 +289,7 @@ class CytoneighborWrapper:
             return dummy_indices, dummy_distances
 
     def get_synthetic_data(self) -> Tuple[np.ndarray, np.ndarray]:
-        """æåæ¨¡åè®­ç»æ?Gene-CutMix äº§ççåæç»è?""
+        """æåæ¨¡åè®­ç»æ?gene-level mixing äº§ççåæç»è?""
         if not self.is_trained:
             return None, None
         z = self.adata.uns.get('cytoneighbor', {})
@@ -442,7 +442,7 @@ class CytoneighborWrapper:
 
     def enable_synthesis(self, enable: bool = True) -> None:
         """
-        Enable or disable Gene-CutMix synthesis.
+        Enable or disable gene-level mixing synthesis.
 
         Args:
             enable: Whether to enable synthesis

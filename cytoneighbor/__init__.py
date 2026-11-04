@@ -1,41 +1,22 @@
-"""
-Cytoneighbor --- Neighbour-evidence-guided single-cell state interpretation.
+"""Cytoneighbor provides inspectable neighbor evidence for single-cell analysis.
 
-Cytoneighbor is a neighbour-evidence framework for inspectable single-cell
-state interpretation in single-cell transcriptomics. It combines scalable
-candidate retrieval (FAISS HNSW) with symmetric pairwise re-scoring
-(SymRelEnc) and Gene-CutMix data augmentation to address four key tasks:
+The framework combines candidate retrieval with supervised symmetric pairwise
+rescoring. It exposes ranked neighbor evidence for annotation and graph-based
+analysis. Optional Unknown retention defers queries for review. The study also
+evaluates training augmentation by mixing gene expression and compares healthy
+and disease cells within inferred proximal tubule states.
 
-1. **Unknown-gating annotation** --- intercepts forced closed-set labels
-   under incomplete reference coverage.
-2. **Boundary-preserving integration** --- maintains biologically meaningful
-   boundaries between related cell types during batch alignment.
-3. **Rare-cell recovery** --- restores displaced rare-cell neighbour evidence
-   under severe abundance imbalance via Gene-CutMix.
-4. **Disease-state matching** --- constructs state-matched disease-healthy
-   comparisons that separate compositional from within-state changes.
-
-Quick Start
+Quick start
 -----------
 >>> import cytoneighbor as cn
 >>> import scanpy as sc
-
 >>> ref = sc.read_h5ad("reference.h5ad")
 >>> qry = sc.read_h5ad("query.h5ad")
+>>> result = cn.quick_annotate(ref, "cell_type", qry)
+>>> print(result.obs["cytoneighbor_prediction"].value_counts())
 
->>> cn.fit(ref, label_key="cell_type")
->>> cn.transform(qry, ref)
->>> cn.annotate(ref, "cell_type", qry, enable_unknown=True)
-
-Main API
---------
-fit          Train a Cytoneighbor model on reference data.
-transform    Build a neighbour graph for downstream Scanpy analysis.
-annotate     Transfer labels using ranked neighbour evidence.
-load_data    Load and preprocess single-cell expression data.
-save_model   Serialize a trained model to disk.
-load_model   Deserialize a trained model from disk.
-quick_annotate  End-to-end annotation in one call (fit + annotate).
+Use `load_data` before calling `fit` directly. Use `transform` to build a
+neighbor graph on an AnnData object with a trained or loaded model.
 """
 
 from cytoneighbor.model import (

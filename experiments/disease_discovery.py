@@ -1,58 +1,11 @@
-"""
-Experiment 3 鈥?PT Anatomical Zonation and Convergent Dedifferentiation in DKD
-Joint Manifold Architecture (Cytoneighbor)
-================================================================================
+"""Original joint-graph analysis of proximal tubule cells in DKD.
 
-Scientific Narrative
---------------------
-Cytoneighbor's zero-shot joint manifold reveals that DKD proximal tubule (PT)
-pathology is not a simple linear dedifferentiation.  Instead, the healthy PT
-organises into two physiologically distinct segments 鈥?S1/S2 and S3 鈥?that
-retain their anatomical identity even within the joint embedding.  Under DKD
-injury both segments undergo parallel, progressive dedifferentiation, ultimately
-*converging* into a shared Injured PT terminal state characterised by severe
-extracellular-matrix remodelling.
-
-Cluster assignment (data-driven, no circular marker pre-selection):
-  鈥?Functional PT (S1/S2-like) [root]  鈥?highest absolute healthy-cell count,
-                                         highest SLC5A2 / LRP2 expression
-  鈥?Functional PT (S3-like)            鈥?lower SLC5A2 consistent with S3 segment,
-                                         highest healthy-cell purity (% Healthy)
-  鈥?Injured PT                         鈥?highest VCAM1 / HAVCR1, EMT signatures
-
-Topology (PAGA):
-  Triangular / convergent 鈥?S1/S2-like 鈫?S3-like 鈫?Injured PT 鈥?both healthy
-  segments share topological edges with the injury terminus, confirming parallel
-  dedifferentiation rather than a single linear path.
-
-Zonation validation:
-  SLC5A1 (SGLT1) 鈥?expressed preferentially in S3 鈥?is checked as an independent
-  positive marker for the S3-like cluster.  Results are logged and plotted.
-
-Architecture:
-  1.  Train SymRelEnc on ALL healthy cells (multi-type; required for contrastive)
-  2.  Extract Healthy PT + Disease PT; tag disease_status
-  3.  ad.concat 鈫?combined_pt; run transform() once 鈫?joint SymRelEnc KNN graph
-  4.  Leiden 鈫?filter tiny clusters 鈫?dynamic resolution search
-  5.  PAGA (convergent topology)
-  6.  Root selection: absolute Healthy_Reference count (marker-free, no circularity)
-  7.  Characterise clusters: S1/S2-like / S3-like / Injured PT
-  8.  DPT from S1/S2-like root (acknowledged approximation for convergent manifold)
-  9.  Zonation validation: SLC5A1 expression profile (independent positive marker)
-  10. Compensatory hypothesis validation (disease-cell-specific SLC5A2 analysis)
-      Cluster-level mean expression differences can arise from three confounded
-      mechanisms: (A) anatomical subtype composition, (B) genuine disease-driven
-      upregulation, or (C) statistical noise.  To disentangle these, step 10
-      computes SLC5A2 expression ONLY in Disease_Query cells within each cluster,
-      then compares directly to Healthy_Reference cells in the same cluster.
-        鈥?If DKD cells in S1/S2-like > healthy cells in S1/S2-like  鈫?compensatory
-          upregulation is supported at the cell level (Discussion material)
-        鈥?If the difference disappears or reverses   鈫?cluster-mean difference was
-          driven by healthy-cell subtype composition (null hypothesis not rejected)
-      Results are logged quantitatively and saved as compensatory_validation.pdf.
-      Regardless of outcome, the primary zonation narrative (Results section) is
-      not altered; the compensatory hypothesis is reported in Discussion only.
-  11. Visualisations + GO enrichment
+A model trained on healthy reference cells is used to build a joint neighbor
+graph of healthy and DKD proximal tubule cells. The driver exports inferred
+states, undirected PAGA connectivity, pseudotime ordering and descriptive
+expression summaries. Its legacy cell-level SLC5A2 comparison uses cells as
+observations. The revised study's donor-level inference and composition
+contrasts are available under repro/revision.
 """
 
 import copy
@@ -143,7 +96,7 @@ STATE_ORDER: List[str] = [
 # ==============================================================================
 class DiseaseDiscoveryExperiment:
     """
-    Experiment 3: PT Zonation and Convergent Dedifferentiation in DKD.
+    Original joint neighbor graph analysis of proximal tubule cells in DKD.
 
     Encapsulates the full joint-manifold pipeline from raw data to
     publication-ready figures.
@@ -635,22 +588,7 @@ class DiseaseDiscoveryExperiment:
     def discover_adaptive_trajectory(
         self, combined_pt: Any
     ) -> Dict[str, Any]:
-        """
-        Discover PT subpopulations and infer the convergent dedifferentiation
-        trajectory on the joint healthy+disease manifold.
-
-        Steps
-        -----
-        1. Leiden clustering on the pre-built SymRelEnc KNN graph.
-        2. Filter tiny clusters (< 1 % of PT cells).
-        3. Dynamic resolution search if < 3 clusters are found.
-        4. PAGA for cluster connectivity (convergent topology detection).
-        5. Root selection: cluster with highest *absolute* Healthy_Reference
-           count 鈥?marker-free, no circular logic.
-        6. Biological characterisation anchored to root.
-        7. DPT from root centroid (acknowledged approximation for convergent
-           manifold; PAGA provides the topologically accurate picture).
-        """
+        """Build the joint PT graph, infer states and compute graph ordering."""
         self.logger.info(
             f"Trajectory discovery on joint manifold "
             f"({combined_pt.n_obs} PT cells, "
@@ -832,7 +770,7 @@ class DiseaseDiscoveryExperiment:
            Rationale: root was selected by absolute healthy count, not markers;
            this cluster also carries the highest SLC5A2 / LRP2 (confirmed post-hoc).
         2. Highest VCAM1 / HAVCR1    鈫?"Injured PT"
-           The terminal dedifferentiation state, characterised by EMT signatures.
+           An inferred state with higher expression of injury-associated markers.
         3. Remaining cluster(s)      鈫?"Functional PT (S3-like)"
            Lower SLC5A2 consistent with S3 segment biology; characterised
            post-hoc via _validate_zonation (SLC5A1 check).
@@ -914,11 +852,7 @@ class DiseaseDiscoveryExperiment:
     # 
 
     def _log_paga_topology(self, pt_cells: Any) -> None:
-        """
-        Log PAGA connectivity matrix above threshold for topology assessment.
-        A triangular / fully-connected graph supports the convergent narrative;
-        a linear chain would support a single-path narrative.
-        """
+        """Log undirected PAGA connectivity above the display threshold."""
         try:
             conn = pt_cells.uns.get("paga", {}).get("connectivities")
             if conn is None:
@@ -941,14 +875,9 @@ class DiseaseDiscoveryExperiment:
             n_edges = len(edges)
             max_possible = n * (n - 1) // 2
             if n == 3 and n_edges == 3:
-                self.logger.info(
-                    "  鈫?FULLY CONNECTED TRIANGLE: consistent with convergent "
-                    "dedifferentiation (both S1/S2 and S3 edges reach Injured PT)"
-                )
+                self.logger.info("All three state pairs have PAGA edges above the threshold.")
             elif n_edges == n - 1:
-                self.logger.info(
-                    "  鈫?LINEAR CHAIN: single-path trajectory topology"
-                )
+                self.logger.info("The number of retained edges equals the number of states minus one.")
             else:
                 self.logger.info(
                     f"  鈫?{n_edges}/{max_possible} edges present 鈥?partial connectivity"
@@ -966,26 +895,7 @@ class DiseaseDiscoveryExperiment:
         characterization: Dict[str, Any],
         output_dir: str,
     ) -> Dict[str, Any]:
-        """
-        Independent validation of the S1/S2 vs S3 zonation hypothesis.
-
-        Strategy
-        --------
-        SLC5A1 (SGLT1) is the primary glucose transporter of the S3 segment
-        and is expressed at low levels in S1/S2.  If our "Functional PT (S3-like)"
-        cluster truly represents the S3 anatomical segment, it should show
-        higher SLC5A1 expression than the S1/S2-like cluster.
-
-        Additional checks
-        -----------------
-        鈥?SLC5A2 (SGLT2) gradient:  S1/S2 > S3 > Injured (expected from anatomy)
-        鈥?Quantitative statistics logged for Methods section
-        鈥?Bar plot saved as zonation_validation.pdf
-
-        Returns
-        -------
-        Dict with per-cluster mean expression for SLC5A1, SLC5A2, and assessment.
-        """
+        """Summarize SLC5A1 and SLC5A2 expression across the inferred states."""
         self.logger.info("=== Zonation validation ===")
         results: Dict[str, Any] = {
             "zonation_marker_present": False,
@@ -1045,7 +955,7 @@ class DiseaseDiscoveryExperiment:
                 self.logger.info(
                     f"  鉁?{zm} higher in S3-like ({s3_val:.4f}) "
                     f"than S1/S2-like ({s12_val:.4f}) 鈥?"
-                    "ZONATION HYPOTHESIS SUPPORTED"
+                    "descriptive marker difference in the inferred states"
                 )
             else:
                 self.logger.warning(
@@ -1059,7 +969,7 @@ class DiseaseDiscoveryExperiment:
             self.logger.warning(
                 f"  {zm} not in var_names 鈥?"
                 "S3 marker validation unavailable; "
-                "zonation claim must rely on SLC5A2 gradient alone."
+                "the state labels remain exploratory."
             )
 
         #  Zonation validation figure 
@@ -1170,7 +1080,7 @@ class DiseaseDiscoveryExperiment:
         self._plot_go_enrichment(pt_cells, characterization, output_dir)
 
     # 
-    # Compensatory hypothesis validation
+    # Exploratory within-state cell-level comparison
     # 
 
     def _validate_compensatory_hypothesis(
@@ -1179,59 +1089,12 @@ class DiseaseDiscoveryExperiment:
         characterization: Dict[str, Any],
         output_dir: str,
     ) -> Dict[str, Any]:
+        """Generate the original exploratory cell-level expression comparison.
+
+        The one-sided Mann-Whitney U test here treats cells as observations.
+        See repro/revision for the donor-level analysis used in the revision.
         """
-        Disease-cell-specific SLC5A2 analysis to test the compensatory
-        upregulation hypothesis.
-
-        Scientific rationale
-        --------------------
-        A cluster-level mean expression difference between clusters can arise
-        from three independent mechanisms that are confounded in whole-cluster
-        means:
-
-          (A) Anatomical subtype composition 鈥?the cluster labelled S1/S2-like
-              may contain a higher fraction of true S1/S2 cells, which
-              constitutively express more SLC5A2 regardless of disease status.
-          (B) Genuine disease-driven upregulation 鈥?DKD cells in the S1/S2-like
-              cluster actively upregulate SLC5A2 as a compensatory response to
-              reduced single-nephron GFR (as hypothesised by the SGLT2 inhibitor
-              rationale literature).
-          (C) Statistical noise 鈥?the 8% mean difference may fall within normal
-              cell-to-cell variability.
-
-        This method disentangles A from B by isolating only the Disease_Query
-        cells within each cluster and comparing their SLC5A2 expression to the
-        Healthy_Reference cells in the SAME cluster.
-
-        Test logic
-        ----------
-        For the S1/S2-like cluster (the key cluster for the compensatory claim):
-          H0: mean_SLC5A2(Disease) 鈮?mean_SLC5A2(Healthy) within the cluster
-          H1: mean_SLC5A2(Disease) >  mean_SLC5A2(Healthy)  鈫?compensatory signal
-
-        A one-sided Mann-Whitney U test is used (non-parametric; robust to the
-        non-normal distribution of single-cell expression values).
-
-        Reporting policy
-        ----------------
-        鈥?If H1 is supported (p < 0.05, disease mean > healthy mean):
-          The compensatory finding is logged as SUPPORTED and reported in
-          Discussion as corroborating evidence for the SGLT2 inhibitor mechanism.
-          The primary zonation narrative (Results) is NOT changed.
-        鈥?If H1 is not supported:
-          The null hypothesis is logged as NOT REJECTED.  The cluster-mean
-          difference is attributed to subtype composition (mechanism A), which
-          is consistent with the zonation interpretation.
-          No language changes are needed in either Results or Discussion.
-
-        Output
-        ------
-        compensatory_validation.pdf  鈥?per-cluster disease vs healthy SLC5A2
-                                       side-by-side bar plot with significance
-                                       annotation and sample sizes
-        Returns dict with per-cluster statistics for JSON results.
-        """
-        self.logger.info("=== Compensatory hypothesis validation ===")
+        self.logger.info("=== Exploratory cell-level expression comparison ===")
 
         result: Dict[str, Any] = {
             "compensatory_supported":    None,
@@ -1248,14 +1111,14 @@ class DiseaseDiscoveryExperiment:
         for col in ("disease_status", "leiden_clusters", "biological_state"):
             if col not in pt_cells.obs.columns:
                 self.logger.warning(
-                    f"  '{col}' absent from obs 鈥?compensatory validation skipped."
+                    f"  '{col}' absent from obs 鈥?cell-level expression comparison skipped."
                 )
                 return result
 
         if target_gene not in pt_cells.var_names:
             self.logger.warning(
                 f"  '{target_gene}' not in var_names 鈥?"
-                "compensatory validation skipped."
+                "cell-level expression comparison skipped."
             )
             return result
 
@@ -1339,32 +1202,18 @@ class DiseaseDiscoveryExperiment:
                 result["s12_n_healthy"]    = n_h
                 result["s12_n_disease"]    = n_d
 
-        #  Verdict on compensatory hypothesis 
+        # Legacy output flag for the directional cell-level comparison
         s12_pval  = result.get("s12_pvalue")
         s12_delta = (result["s12_disease_mean"] or 0.0) - (result["s12_healthy_mean"] or 0.0)
 
         if s12_pval is not None and not np.isnan(s12_pval):
             supported = (s12_pval < 0.05) and (s12_delta > 0)
             result["compensatory_supported"] = supported
-            if supported:
-                self.logger.info(
-                    f"\n  鈺斺晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晽\n"
-                    f"  鈺? COMPENSATORY HYPOTHESIS SUPPORTED                    鈺慭n"
-                    f"  鈺? DKD cells in S1/S2-like show higher {target_gene}         鈺慭n"
-                    f"  鈺? than healthy cells in the same cluster               鈺慭n"
-                    f"  鈺? 螖={s12_delta:+.4f}  p={s12_pval:.4f}                       鈺慭n"
-                    f"  鈺? 鈫?Suitable for Discussion (not Results)              鈺慭n"
-                    f"  鈺氣晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨暆"
-                )
-            else:
-                self.logger.info(
-                    f"\n  鈹屸攢鈹怽n"
-                    f"  鈹? COMPENSATORY HYPOTHESIS NOT SUPPORTED                鈹俓n"
-                    f"  鈹? 螖={s12_delta:+.4f}  p={s12_pval:.4f}                      鈹俓n"
-                    f"  鈹? Cluster-mean difference attributable to subtype      鈹俓n"
-                    f"  鈹? composition (mechanism A) 鈥?consistent with zonation 鈹俓n"
-                    f"  ------------------------------------------------------------\n"
-                )
+            self.logger.info(
+                "Exploratory cell-level S1/S2-like %s contrast: delta=%+.4f, p=%.4f. "
+                "See the revision analysis for donor-level inference.",
+                target_gene, s12_delta, s12_pval,
+            )
         else:
             self.logger.warning("  S1/S2-like cluster not found or test failed.")
 
@@ -1453,21 +1302,10 @@ class DiseaseDiscoveryExperiment:
                 ax.spines["top"].set_visible(False)
                 ax.spines["right"].set_visible(False)
 
-            verdict = result.get("compensatory_supported")
-            verdict_str = (
-                "SUPPORTED 鈥?disease cells show higher SLC5A2 within S1/S2-like cluster"
-                if verdict is True
-                else (
-                    "NOT SUPPORTED 鈥?difference attributable to subtype composition"
-                    if verdict is False
-                    else "INCONCLUSIVE"
-                )
-            )
             fig.suptitle(
-                f"Compensatory Hypothesis Validation: {target_gene}\n"
-                f"Disease_Query vs Healthy_Reference within each cluster\n"
-                f"Verdict: {verdict_str}\n"
-                "(one-sided Mann-Whitney U; reported in Discussion only)",
+                f"Exploratory within-state {target_gene} expression\n"
+                "DKD vs healthy reference cells within inferred states\n"
+                "(legacy cell-level comparison, one-sided Mann-Whitney U)",
                 fontsize=9, fontweight="bold", y=1.03,
             )
             plt.tight_layout()
@@ -1475,12 +1313,12 @@ class DiseaseDiscoveryExperiment:
             plt.savefig(save_path, dpi=300, bbox_inches="tight")
             plt.close()
             self.logger.info(
-                f"Compensatory validation figure saved: {save_path}"
+                f"Exploratory cell-level expression figure saved: {save_path}"
             )
 
         except Exception as e:
             self.logger.warning(
-                f"Compensatory validation plot failed (non-fatal): {e}"
+                f"Exploratory cell-level expression plot failed (non-fatal): {e}"
             )
             plt.close("all")
 
@@ -1590,25 +1428,14 @@ class DiseaseDiscoveryExperiment:
         characterization: Dict[str, Any],
         output_dir: str,
     ) -> None:
-        """
-        PAGA cluster connectivity plot.
-
-        Key message: triangular connectivity supports convergent dedifferentiation
-        (S1/S2-like and S3-like both connect to Injured PT) rather than a linear
-        chain.  DPT linearises this, which is explicitly acknowledged in the figure
-        subtitle.
-        """
-        self.logger.info("Plotting PAGA trajectory (convergent topology)...")
+        """Plot undirected PAGA connectivity between inferred states."""
+        self.logger.info("Plotting undirected PAGA state connectivity...")
         try:
             label_str = "  |  ".join(
                 f"Cluster {k} = {v}"
                 for k, v in sorted(characterization["cluster_labels"].items())
             )
-            title = (
-                f"PAGA Cluster Connectivity\n{label_str}\n"
-                "Triangular topology = convergent dedifferentiation\n"
-                "(S1/S2-like and S3-like converge onto shared Injured PT)"
-            )
+            title = f"Undirected PAGA State Connectivity\n{label_str}"
             fig, ax = plt.subplots(figsize=(8, 7))
             sc.pl.paga(
                 pt_cells,
@@ -1633,20 +1460,7 @@ class DiseaseDiscoveryExperiment:
     # 
 
     def _plot_marker_trends(self, pt_cells: Any, output_dir: str) -> None:
-        """
-        Gaussian-smoothed marker gene dynamics along rank-transformed DPT.
-
-        Markers plotted (in order):
-          SLC5A2  鈥?epithelial function; expected monotonic decrease
-          LRP2    鈥?epithelial function; expected monotonic decrease
-          VCAM1   鈥?acute stress;        expected monotonic increase
-          HAVCR1  鈥?chronic injury;      expected monotonic increase
-
-        Important caveat note in figure subtitle:
-          DPT is computed from S1/S2-like root only.  The convergent PAGA
-          topology means the DPT x-axis represents an average path through the
-          manifold, not a unique biological timeline.
-        """
+        """Plot smoothed marker expression along the rooted graph ordering."""
         self.logger.info("Plotting marker gene trends along DPT...")
 
         if "dpt_pseudotime" not in pt_cells.obs:
@@ -1696,10 +1510,8 @@ class DiseaseDiscoveryExperiment:
             axes = [axes]
 
         fig.suptitle(
-            "Marker Gene Dynamics Along DPT Pseudotime\n"
-            "(root = Functional PT S1/S2-like  |  "
-            "x-axis is rank-transformed DPT 鈥?approximate for convergent manifold;\n"
-            "see PAGA figure for topologically accurate cluster connectivity)",
+            "Marker Expression Along the DPT Graph Ordering\n"
+            "(root: Functional PT S1/S2-like)",
             fontsize=9, fontweight="bold", y=1.02,
         )
 
@@ -1737,11 +1549,7 @@ class DiseaseDiscoveryExperiment:
             ax.legend(loc="upper right" if marker in ("VCAM1", "HAVCR1")
                       else "upper left", frameon=True, fontsize=7)
 
-        axes[-1].set_xlabel(
-            "Rank-transformed DPT  "
-            "(S1/S2-like root 鈫?Injured PT, convergent manifold approximation)",
-            fontsize=9,
-        )
+        axes[-1].set_xlabel("Rank-transformed DPT from the S1/S2-like root", fontsize=9)
         plt.tight_layout()
         save_path = os.path.join(output_dir, "marker_trends.pdf")
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
@@ -1790,11 +1598,8 @@ class DiseaseDiscoveryExperiment:
             linewidths=0.5, linecolor="white",
             cbar_kws={"label": "Mean Expression Score"},
         )
-        ax.set_title(
-            "Convergent Dedifferentiation:\n"
-            "Functional Loss (鈫? and Injury Gain (鈫? across PT Zonation States",
-            fontweight="bold", fontsize=9,
-        )
+        ax.set_title("Functional and Injury Expression Scores Across PT States",
+                     fontweight="bold", fontsize=9)
         ax.set_xticklabels(ax.get_xticklabels(), rotation=25, ha="right", fontsize=8)
         plt.tight_layout()
         save_path = os.path.join(output_dir, "cluster_characterization.pdf")
@@ -1809,24 +1614,7 @@ class DiseaseDiscoveryExperiment:
     def _plot_origin_composition(
         self, pt_cells: Any, output_dir: str
     ) -> None:
-        """
-        Stacked percentage bar plot: Healthy_Reference vs Disease_Query per state.
-
-        Scientific purpose
-        ------------------
-        Addresses reviewer concern about UMAP over-plotting (11 000+ cells).
-        Provides quantitative per-cluster healthy/disease breakdown that is
-        cited directly in Results and Methods sections.
-
-        Expected pattern (supports convergent dedifferentiation)
-        --------------------------------------------------------
-        鈥?Functional PT (S1/S2-like): high % healthy (numerically dominant segment)
-        鈥?Functional PT (S3-like):    highest % healthy (relatively preserved in DKD)
-        鈥?Injured PT:                 highest % disease (terminal disease state)
-
-        Prints the full composition table to the logger for copy-paste into the
-        paper Methods / Results sections.
-        """
+        """Summarize the healthy and DKD cell composition of each inferred state."""
         self.logger.info("Plotting cell-origin composition barplot...")
 
         for col in ("disease_status", "biological_state"):
@@ -2090,28 +1878,9 @@ class DiseaseDiscoveryExperiment:
     # 
 
     def run_experiment(self) -> Dict[str, Any]:
-        """
-        Execute the full Experiment 3 pipeline.
-
-        Joint Manifold Architecture 鈥?step by step
-        -------------------------------------------
-        1. Train SymRelEnc on ALL healthy cells (multi-type; required for
-           contrastive negative pairs).
-        2. Extract Healthy PT + Disease PT cells; tag disease_status.
-        3. ad.concat 鈫?combined_pt (single AnnData with both origins).
-        4. transform() ONCE on combined_pt 鈫?SymRelEnc joint KNN graph.
-           Healthy cells become real topological anchors.
-        5. Leiden 鈫?filter 鈫?dynamic resolution.
-        6. PAGA (convergent topology detection).
-        7. Root = cluster with highest absolute Healthy_Reference count
-           (marker-free; justified by S1/S2 numerical dominance in kidney).
-        8. Characterise: S1/S2-like / S3-like / Injured PT.
-        9. DPT pseudotime from S1/S2-like root.
-        10. Full visualisation suite.
-        11. Summary report + JSON results.
-        """
+        """Run the original joint graph, state and expression analyses."""
         self.logger.info(
-            "=== Starting Experiment 3: PT Zonation + Convergent Dedifferentiation ==="
+            "=== Original DKD joint graph analysis ==="
         )
         try:
             full_data, reference_data, query_data = self.load_and_preprocess_data()
@@ -2235,24 +2004,12 @@ class DiseaseDiscoveryExperiment:
 
         with open(report_path, "w", encoding="utf-8") as f:
             f.write(
-                "EXPERIMENT 3 鈥?PT ZONATION AND CONVERGENT DEDIFFERENTIATION IN DKD\n"
-                "Joint Manifold Architecture (Cytoneighbor)\n"
+                "ORIGINAL DKD PROXIMAL TUBULE STATE ANALYSIS\n"
                 + "=" * 68 + "\n\n"
-            )
-
-            f.write("SCIENTIFIC NARRATIVE\n")
-            f.write("-" * 40 + "\n")
-            f.write(
-                "Cytoneighbor's zero-shot joint manifold resolves two physiologically\n"
-                "distinct healthy PT segments (S1/S2-like and S3-like) that retain\n"
-                "anatomical identity within the joint embedding.  Under DKD, both\n"
-                "segments undergo parallel progressive dedifferentiation, converging\n"
-                "to a shared Injured PT terminal state (VCAM1鈫戔啈, HAVCR1鈫戔啈, ECM genes).\n"
-                "PAGA reveals a triangular / convergent topology, not a linear chain.\n\n"
-                "  Functional PT (S1/S2-like)  鈹怽n"
-                "    SLC5A2鈫戔啈 LRP2鈫戔啈            鈹溾攢鈫? Injured PT\n"
-                "  Functional PT (S3-like)      鈹?     VCAM1鈫戔啈 HAVCR1鈫戔啈\n"
-                "    SLC5A2鈫? (S3 anatomy)\n\n"
+                "The joint neighbor graph groups healthy and DKD cells into inferred states.\n"
+                "PAGA summarizes undirected state connectivity. DPT provides a graph ordering.\n"
+                "Expression and composition summaries are exploratory. See repro/revision for\n"
+                "the donor-level inference and composition contrasts used in the revision.\n\n"
             )
 
             f.write("DATASET INFORMATION\n")
@@ -2304,12 +2061,12 @@ class DiseaseDiscoveryExperiment:
             f.write("-" * 40 + "\n")
             files = [
                 ("umap_combined.pdf",              "4-panel UMAP (Leiden / States / Origin / DPT)"),
-                ("paga_trajectory.pdf",            "PAGA convergent topology (triangular)"),
+                ("paga_trajectory.pdf",            "Undirected PAGA state connectivity"),
                 ("marker_trends.pdf",              "Marker dynamics along DPT pseudotime"),
                 ("cluster_characterization.pdf",   "Functional vs Injury score heatmap"),
                 ("origin_composition_barplot.pdf", "Quantitative healthy/disease per state"),
                 ("zonation_validation.pdf",        "SLC5A1 / SLC5A2 zonation validation"),
-                ("compensatory_validation.pdf",    "Disease-cell-specific SLC5A2 (Discussion only)"),
+                ("compensatory_validation.pdf",    "Legacy cell-level SLC5A2 comparison"),
                 ("go_enrichment_bubble.pdf",       "GO enrichment S1/S2-like vs Injured PT"),
                 ("experiment_results.json",        "Full numerical results"),
             ]
@@ -2317,44 +2074,14 @@ class DiseaseDiscoveryExperiment:
                 f.write(f"  {fname:<45} {desc}\n")
             f.write("\n")
 
-            f.write("METHODOLOGY NOTES\n")
-            f.write("-" * 40 + "\n")
             f.write(
-                "  1. SymRelEnc trained on ALL healthy cell types: multi-type negative\n"
-                "     pairs are required for contrastive learning; PT-only training\n"
-                "     yields degenerate embeddings.\n\n"
-                "  2. Joint manifold: healthy PT and disease PT are physically\n"
-                "     concatenated into a single AnnData before transform().  This\n"
-                "     allows disease cells to find healthy cells as K-nearest neighbours,\n"
-                "     making healthy cells true topological anchors.\n\n"
-                "  3. Root selection (marker-free): the cluster with the highest\n"
-                "     ABSOLUTE number of Healthy_Reference cells is selected as root.\n"
-                "     Absolute count is used (rather than purity %) because the S1/S2\n"
-                "     segment constitutes ~60鈥?0% of PT tubular volume (Lindstr枚m 2021)\n"
-                "     and thus dominates numerically.  This eliminates any circular\n"
-                "     dependence between root selection and downstream marker labelling.\n\n"
-                "  4. DPT is computed from the S1/S2-like root as an approximation.\n"
-                "     The PAGA figure provides the topologically accurate view: a\n"
-                "     triangular graph confirming convergent (not linear) topology.\n"
-                "     This distinction is explicitly noted in figure subtitles.\n\n"
-                "  5. Zonation validation: SLC5A1 (SGLT1), the predominant glucose\n"
-                "     transporter of S3, is checked in _validate_zonation().  If\n"
-                "     SLC5A1 > S3-like versus S1/S2-like, the zonation hypothesis is\n"
-                "     supported.  If absent from HVGs, the zonation claim is described\n"
-                "     as 'consistent with' rather than 'confirmed'.\n\n"
-                "  6. GO enrichment: strict filter (logFC > 1.0, p_adj < 0.01) removes\n"
-                "     ambient-RNA contaminants (MT-, RPS*, RPL*, MALAT1) that caused\n"
-                "     non-kidney terms in earlier pipeline versions.\n\n"
-                "  7. Compensatory hypothesis validation (compensatory_validation.pdf):\n"
-                "     Cluster-level mean expression differences between clusters can arise\n"
-                "     from (A) anatomical subtype composition, (B) genuine disease-driven\n"
-                "     upregulation, or (C) statistical noise.  To disentangle A from B,\n"
-                "     SLC5A2 is compared ONLY between Disease_Query and Healthy_Reference\n"
-                "     cells WITHIN the same cluster (one-sided Mann-Whitney U test).\n"
-                "     This directly tests whether DKD cells actively upregulate SLC5A2\n"
-                "     relative to healthy neighbours in the joint manifold.\n"
-                "     Result is reported in Discussion only; the primary Results section\n"
-                "     (zonation narrative) is not contingent on this outcome.\n"
+                "METHODS NOTES\n"
+                "1. Train the relation model on healthy reference cells across lineages.\n"
+                "2. Build a joint neighbor graph for healthy and DKD proximal tubule cells.\n"
+                "3. Characterize inferred states and select the DPT root by healthy cell count.\n"
+                "4. Summarize undirected PAGA connectivity and marker expression.\n"
+                "5. The legacy expression output compares cells within the same inferred state.\n"
+                "   The revision uses donors as the statistical units.\n"
             )
             f.write(f"\nOutput directory: {output_dir}\n")
 

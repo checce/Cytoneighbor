@@ -140,7 +140,7 @@ def test_quick_run():
         train_pairs_per_epoch=200,
         use_cuda=False,       # CPU-safe by default
         use_amp=False,
-        synth_enable=False,   # skip Gene-CutMix for speed
+        synth_enable=False,   # skip gene-level mixing for speed
         early_stopping_patience=None,
         validation_split=None, # skip validation for speed
     )

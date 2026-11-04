@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center">&#128300; Cytoneighbor</h1>
   <p align="center">
-    <strong>Neighbour-evidence-guided single-cell state interpretation</strong>
+    <strong>A scalable neighbor evidence framework for single-cell state analysis</strong>
   </p>
   <p align="center">
     <a href="https://www.python.org/downloads/">
@@ -30,25 +30,25 @@ has strong evidence and where it needs closer review.
 The framework combines three core components:
 
 - **Scalable candidate retrieval** with FAISS HNSW to shortlist candidates before neural scoring. The revision reports measured resource use up to 100,000 cells in a single PBMC workload
-- **Exact pairwise re-scoring** via a **Symmetric Relation Encoder (SymRelEnc)** that learns discriminative cell-pair relationships
-- **Gene-CutMix**, a training-time augmentation strategy evaluated under a controlled pancreatic delta-cell scarcity protocol
+- **Supervised symmetric pairwise rescoring** evaluates the shortlisted neighbors using differences in gene expression.
+- **Training augmentation by mixing expression at the gene level** was evaluated under controlled pancreatic delta-cell scarcity. Retrieval uses real reference cells.
 
 Cytoneighbor fits naturally into a standard Scanpy workflow: train a model,
 build a neighbour graph, and then use it as a drop-in replacement for any
 downstream function that accepts a `neighbors_key`.
 
-> &#128214; **Paper**: Hu H. et al. *Cytoneighbor: a scalable neighbor evidence framework for single-cell state analysis* (in preparation).
+> &#128214; **Paper**: Hu H. et al. *Cytoneighbor: a scalable neighbor evidence framework for single-cell state analysis*.
 
 ---
 
 ## &#127775; Why Cytoneighbor?
 
-| Your goal | Typical approach | What Cytoneighbor does differently |
-|---|---|---|
-| Annotate cells | Closed-set forced label | **Unknown-gating**: defer low-evidence calls and inspect the confidence, margin and entropy |
-| Integrate batches | Global alignment blurs boundaries | **Boundary-preserving**: inspect how well neighbourhoods retain related-type boundaries and measure the trade-off with batch mixing |
-| Find rare cells | Oversampling or downweighting | **Gene-CutMix**: test augmentation with real reference cells at inference |
-| Compare disease vs healthy | Pooled-control differential expression | **State-matched**: separates compositional redistribution from within-state expression changes |
+| Your goal | What you can inspect |
+|---|---|
+| Annotate cells | Examine the neighbor support for a label and retain weakly supported queries as *Unknown* for review. |
+| Examine batch integration | Compare agreement with cell type annotations, cluster purity, and batch mixing. Evaluate label transfer separately. |
+| Evaluate retrieval for a scarce cell type | Measure where authentic same-type reference cells appear in the ranked neighbor list under different training settings. |
+| Compare disease and healthy cells | Examine expression within inferred cell states and assess how state composition affects the overall contrast. |
 
 ---
 
@@ -109,7 +109,7 @@ import cytoneighbor as cn
 ref  = sc.read_h5ad("reference.h5ad")    # well-annotated reference
 qry  = sc.read_h5ad("query.h5ad")        # your query to annotate
 
-# 2. One call: train on reference, annotate query with unknown-gating
+# 2. One call: train on reference, annotate query with Unknown retention
 result = cn.quick_annotate(ref, "cell_type", qry)
 
 # 3. Inspect
@@ -119,6 +119,8 @@ print(result.obs["cytoneighbor_prediction"].value_counts())
 Try the [annotation tutorial](tutorials/tutorial_annotation.ipynb) with synthetic data before downloading a real dataset.
 
 ---
+
+<a name="cytoneighbor-api"></a>
 
 ## &#128218; API at a Glance
 
@@ -153,7 +155,7 @@ cn.load_model(ref, "my_model.zip")
 
 ## &#128736;&#65039; Core Workflows
 
-### &#129514; Cell-type Annotation with Unknown-gating
+### &#129514; Cell Type Annotation with Optional Unknown Retention
 
 The primary use case: you have a well-annotated reference and an unlabelled
 query — and the query may contain cell types *not present* in your reference.
@@ -166,7 +168,7 @@ import scanpy as sc
 ref  = sc.read_h5ad("your_reference.h5ad")
 qry  = sc.read_h5ad("your_query.h5ad")
 
-# 2. Train and annotate with unknown-gating enabled
+# 2. Train and annotate with Unknown retention enabled
 cn.load_data(ref, data=ref.X, labels=ref.obs["your_cell_type_column"].to_numpy())
 cn.fit(ref)
 cn.annotate(ref, "your_cell_type_column", qry, enable_unknown=True)
@@ -186,17 +188,20 @@ When `enable_unknown=True`, Cytoneighbor writes diagnostic columns to
 | `cytoneighbor_confidence` | Top-class preference score (0–1) |
 | `cytoneighbor_margin` | Gap between the two highest class preference scores |
 | `cytoneighbor_norm_entropy` | Normalised prediction entropy (0–1) |
-| `cytoneighbor_is_unknown` | Boolean: was this cell gated as Unknown? |
+| `cytoneighbor_is_unknown` | Whether the query was retained as Unknown |
 
-**How to interpret**. Treat *Unknown* as a deferral for review. Default thresholds
+Treat *Unknown* as a deferral for review. Default thresholds
 are development heuristics. The revision reports known-type error screening and
 reference-absent types separately. Inspect both error interception and correct
 labels deferred before transferring the rule to a new dataset.
 
-### &#128225; Boundary-preserving Batch Integration
+### &#128225; Batch Integration with Neighbor Graphs
 
-Build a graph across batches and examine related cell-type boundaries alongside
-batch mixing. The study compares graph clustering and label transfer separately.
+Build a graph across batches and evaluate cell type structure alongside batch
+mixing. In the shared immune query pool, Cytoneighbor showed higher aggregate
+graph clustering agreement than scANVI, while some types had lower cluster
+purity and scANVI transferred labels more accurately. The study reports these
+endpoints separately.
 
 ```python
 import cytoneighbor as cn
@@ -227,41 +232,34 @@ sc.tl.rank_genes_groups(adata, groupby="leiden")       # marker detection
 
 Pass `neighbors_key="neighbors"` to Scanpy to use the Cytoneighbor graph.
 
-### &#128300; Rare-cell Recovery with Gene-CutMix
+### &#128300; Training Augmentation and Rare Cell Retrieval
 
-Gene-CutMix generates synthetic profiles for training. The revision compares
-several controls under pancreatic delta-cell scarcity and uses real cells in
-both inference reference pools. The direction of the effect depends on the
-reference pool, comparator and seed.
+Mixing expression at the gene level generates synthetic profiles for training.
+In the pancreatic delta-cell experiments, inference used real reference cells.
+The original scarcity analysis used graph connectivity to rank neighbors. The
+additional comparison used final neural rankings, and the effect of augmentation
+varied with the reference pool, comparator and seed.
 
 ```python
-# Gene-CutMix is enabled by default during fit().
+# Gene-level mixing is enabled by default during fit().
 # Tune its behaviour via optional parameters:
 cn.load_data(adata, data=adata.X, labels=adata.obs["cell_type"].to_numpy())
 cn.fit(
     adata,
-    synth_enable=True,           # enable Gene-CutMix (default: True)
+    synth_enable=True,           # enable training augmentation (default: True)
     synth_mult_per_dt=2.0,       # synthesis multiplier per rare type
     synth_cap_per_dt=500,        # upper cap on synthetic cells per type
 )
 ```
 
-### &#128137; Disease-state Matching
+### &#128137; Disease Comparisons Within Inferred Cell States
 
-For disease-vs-healthy comparisons, Cytoneighbor constructs state-matched
-neighbourhoods for comparing state composition and within-state expression.
-The DKD example uses donors as the statistical units and reports exploratory
-patterns alongside adjusted results.
-
-```python
-# Train on healthy reference, annotate disease query
-cn.load_data(healthy_ref, data=healthy_ref.X, labels=healthy_ref.obs["cell_type"].to_numpy())
-cn.fit(healthy_ref)
-cn.annotate(healthy_ref, "cell_type", disease_query, enable_unknown=False)
-
-# Inspect the predicted reference labels before assigning disease states.
-print(disease_query.obs["cytoneighbor_prediction"].value_counts())
-```
+In the diabetic kidney disease (DKD) study, a relation model trained on healthy
+reference cells was used to build a joint graph of healthy and DKD proximal
+tubule cells. The analysis compared SLC5A2 expression within the inferred states,
+using donors as the statistical units, and examined how state composition
+affected the overall expression contrast. Neither expression measure reached
+significance after correction. See the [donor analysis and replay](repro/revision/).
 
 ---
 
@@ -272,7 +270,7 @@ Open the [annotation](tutorials/tutorial_annotation.ipynb) and
 
 ### 1. Cell-type Annotation
 
-Train → annotate → visualize → export. Covers unknown-gating, confidence
+Train → annotate → visualize → export. Covers Unknown retention, preference scores
 diagnostics, and adapting the workflow to your own data.
 
 ### 2. Batch Integration
@@ -293,21 +291,21 @@ Cytoneighbor/
 |
 +-- cytoneighbor/                   #  Core package
 |   +-- __init__.py                 #     Public API + quick_annotate() entry point
-|   +-- model.py                    #     SymRelEnc, FAISS HNSW, Gene-CutMix, annotate
+|   +-- model.py                    #     Pairwise scoring, FAISS HNSW, training augmentation
 |   +-- trainer.py                  #     Training wrapper (CytoneighborWrapper, TrainingManager)
 |   +-- utils.py                    #     Config, data loading, metrics, visualization
 |
 +-- tutorials/                      #  Interactive guides
 |   +-- tutorial_annotation.ipynb   #     Cell-type annotation with unknown-gating
-|   +-- tutorial_integration.ipynb  #     Boundary-preserving batch integration
+|   +-- tutorial_integration.ipynb  #     Batch integration with neighbor graphs
 |   +-- README.md                   #     Tutorial prerequisites & dataset info
 |
 +-- experiments/                    #  Paper reproducibility scripts
 |   +-- Annotation/                 #     LOBO annotation and baseline drivers
 |   +-- Rebatch/                    #     Batch integration benchmarks
 |   +-- benchmark_resolution.py     #     Resolution stress-test (NK vs NKT)
-|   +-- mechanism_analysis.py       #     Gene-CutMix mechanism study
-|   +-- disease_discovery.py        #     DKD disease-state matching
+|   +-- mechanism_analysis.py       #     Original pancreatic delta-cell scarcity study
+|   +-- disease_discovery.py        #     Original joint graph analysis in DKD
 |
 +-- tests/                          #  Automated tests
 |   +-- test_quick_run.py           #     30-second sanity check (no data download)
@@ -465,7 +463,7 @@ weights and can be distributed independently.
 
 If you use Cytoneighbor in your research, please cite:
 
-> Hu H. et al. *Cytoneighbor: a scalable neighbor evidence framework for single-cell state analysis*. (in preparation).
+> Hu H. et al. *Cytoneighbor: a scalable neighbor evidence framework for single-cell state analysis*..
 
 ---
 

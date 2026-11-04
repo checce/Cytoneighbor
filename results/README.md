@@ -12,14 +12,16 @@ names below. For the revision, start with the
 | `CV_Rebatch/` | Batch integration embeddings and checkpoints |
 | `benchmark_resolution/` | Integration comparison and resolution outputs |
 | `figure2_annotation_assets/` | Annotation example and its local neighbourhood |
-| `mechanism_analysis/` | Original scarcity and Gene-CutMix outputs |
-| `disease_discovery/` | DKD analyses and `figure5_rebuild_data/` |
+| `mechanism_analysis/` | Original pancreatic delta-cell scarcity analysis |
+| `disease_discovery/` | Original DKD analysis and `figure5_rebuild_data/` |
 
 The archive may show multiple folders with the same name. Use the copy
 containing the inputs for the protocol you intend to replay. The
 [reproducibility guide](../repro/) distinguishes the original workflows
 from the revision analyses and identifies which checks run on GitHub
-assets alone.
+assets alone. Archived figures, filenames and JSON keys reflect the original
+experiment versions. Use the revision tables for the donor-level DKD inference
+and the additional training augmentation comparisons.
 
 For regeneration of the original summary tables, the
 [DKD results folder with experiment_results.json](https://drive.google.com/drive/folders/1griQ2A8UXW4NLI2Gz_Vv-YQgmAb-DFZL)

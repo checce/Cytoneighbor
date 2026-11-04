@@ -14,7 +14,7 @@ preprocessing.
 | --- | ---: | ---: | --- |
 | `Human immune.h5ad` | 33,506 | 12,303 | Annotation, integration and the tutorials |
 | `Pancreas.h5ad` | 16,382 | 18,771 | Pancreatic delta-cell scarcity experiments |
-| `Diabetic Kidney Disease.h5ad` | 39,176 | 27,980 | Kidney state matching and the donor analysis |
+| `Diabetic Kidney Disease.h5ad` | 39,176 | 27,980 | Proximal tubule state comparisons and donor analysis in DKD |
 | `Lung_atlas_public.h5ad` | 32,472 | 15,148 | Leave-one-batch-out annotation |
 | `Mouse_Kidney_mod1.h5ad` | 11,296 | 29,013 | Leave-one-batch-out annotation |
 | `8d2e51ab-0edd-46c8-bdac-558de319d6c2_sample_id_7_donor_id_6.h5ad` | 12,808 | 61,455 | Human tendon snRNA-seq annotation |

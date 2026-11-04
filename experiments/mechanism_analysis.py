@@ -1,6 +1,6 @@
 """
-Experiment 2: Mechanism Analysis Experiment
-Demonstrates that Gene-CutMix repairs manifold breaks and recovers rare cells.
+Original pancreatic delta-cell scarcity experiment.
+Compares training with and without gene-level mixing using graph-ranked neighbors.
 """
 
 import os
@@ -342,7 +342,7 @@ class MechanismAnalysisExperiment(BaseExperiment):
     #     Scientific rationale
     #     --------------------
     #     The retrieval database deliberately contains only genuine cells.
-    #     Recall@K therefore measures whether Gene-CutMix improves the *embedding
+    #     Recall@K therefore measures whether gene-level mixing improves the *embedding
     #     quality* of the learned relational manifold — i.e. whether real rare
     #     cells are mapped closer to other real rare cells in representation space.
 
@@ -445,8 +445,7 @@ class MechanismAnalysisExperiment(BaseExperiment):
                                      ref_data: sc.AnnData) -> Dict[str, Any]:
         """
         Extract rare-cell subgraphs from each model's learned KNN graph and
-        count connected components (NCC).  A reduction in NCC from Case A → B
-        confirms that Gene-CutMix bridges previously isolated rare-cell islands.
+        count connected components (NCC) as a descriptive graph summary for each training setting.
 
         GRAPH_N_NEIGHBORS = 15 ensures sufficient global connectivity so that
         rare cells have a realistic chance of building edges across noise gaps.
@@ -559,7 +558,7 @@ class MechanismAnalysisExperiment(BaseExperiment):
                 label='Case A (No Synthesis)', color='#1f77b4',
                 linewidth=1.0, markersize=3.5)
         ax.plot(x_idx, recall_data['case_b'], marker='o', linestyle='-',
-                label='Case B (Gene-CutMix)', color='#ff7f0e',
+                label='Case B (gene-level mixing)', color='#ff7f0e',
                 linewidth=1.5, markersize=3.5)
         ax.set_xticks(x_idx)
         ax.set_xticklabels(self.recall_k_values)
@@ -672,7 +671,7 @@ class MechanismAnalysisExperiment(BaseExperiment):
                         marker='^', rasterized=True, zorder=3,
                         label='Synthetic bridge cells')
             ax2.legend(frameon=False, loc='lower right', markerscale=0.8)
-        ax2.set_title('(B) Cytoneighbor with\nGene-CutMix training',
+        ax2.set_title('(B) Cytoneighbor with\ngene-level mixing training',
                       fontweight='bold')
         ax2.axis('off')
 
@@ -682,7 +681,7 @@ class MechanismAnalysisExperiment(BaseExperiment):
 
         # ── Figure 3: Summary statistics table ────────────────────────────
         cols = [f"Recall@{k}" for k in self.recall_k_values]
-        rows = ["Case A (No Synth)", "Case B (Gene-CutMix)",
+        rows = ["Case A (No Synth)", "Case B (gene-level mixing)",
                 "Improvement (Abs)", "Improvement (Rel)"]
 
         c_a = recall_data['case_a']
@@ -762,7 +761,7 @@ class MechanismAnalysisExperiment(BaseExperiment):
     #         f.write(f"Reference Set (Train):     {results['data_info']['reference']} cells\n")
     #         f.write(f"Query Set (Held-out Test): {results['data_info']['query']} cells\n\n")
 
-    #         f.write("Topological Manifold Repair (Graph Connectivity):\n")
+    #         f.write("Graph Connectivity:\n")
     #         topo = results.get('manifold_analysis', {}).get('topological_connectivity', {})
     #         f.write(f"  Case A isolated islands : {topo.get('case_a_components_count', 0)}\n")
     #         f.write(f"  Case B isolated islands : {topo.get('case_b_components_count', 0)}\n")
@@ -778,7 +777,7 @@ class MechanismAnalysisExperiment(BaseExperiment):
         
         with open(report_path, 'w', encoding='utf-8') as f:
             f.write("========================================================================\n")
-            f.write(" EXPERIMENT 2: ZERO-SHOT MANIFOLD REPAIR & RARE CELL RECOVERY REPORT\n")
+            f.write(" ORIGINAL PANCREATIC DELTA-CELL SCARCITY ANALYSIS\n")
             f.write("========================================================================\n\n")
             
             f.write("[1. DATASET PARTITIONING & EXTREME SCARCITY SETTING]\n")
@@ -806,14 +805,14 @@ class MechanismAnalysisExperiment(BaseExperiment):
             deltas = [case_b_recalls.get(str(k), 0.0) - case_a_recalls.get(str(k), 0.0)
                       for k in self.recall_k_values]
             if all(d >= 0 for d in deltas):
-                f.write("\n* Interpretation: under this run, Gene-CutMix was associated with equal or\n")
+                f.write("\n* Interpretation: under this run, gene-level mixing was associated with equal or\n")
                 f.write("  higher retrieval yield across the evaluated neighborhood range.\n\n")
             elif all(d <= 0 for d in deltas):
-                f.write("\n* Interpretation: under this run, Gene-CutMix was associated with lower\n")
+                f.write("\n* Interpretation: under this run, gene-level mixing was associated with lower\n")
                 f.write("  retrieval yield across the evaluated neighborhood range and should be\n")
                 f.write("  interpreted cautiously before being used for manuscript figures.\n\n")
             else:
-                f.write("\n* Interpretation: under this run, Gene-CutMix showed mixed retrieval effects\n")
+                f.write("\n* Interpretation: under this run, gene-level mixing showed mixed retrieval effects\n")
                 f.write("  across neighborhood sizes rather than a uniform gain.\n\n")
 
             f.write("[3. TOPOLOGICAL GRAPH CONNECTIVITY]\n")
@@ -821,7 +820,7 @@ class MechanismAnalysisExperiment(BaseExperiment):
             topo = results.get('manifold_analysis', {}).get('topological_connectivity', {})
             f.write(f"Graph Construction K:                  {topo.get('graph_k_used', 'N/A')}\n")
             f.write(f"Baseline (Case A) Isolated Components: {topo.get('case_a_components_count', 'N/A')}\n")
-            f.write(f"Repaired (Case B) Isolated Components: {topo.get('case_b_components_count', 'N/A')}\n")
+            f.write(f"Case B Isolated Components: {topo.get('case_b_components_count', 'N/A')}\n")
             f.write(f"Synthetic Anchor Support Injected:     {'Yes' if topo.get('synthetic_cells_added', False) else 'No'}\n")
             f.write(f"Synthetic Assets Available:            {'Yes' if results['ablation_results']['case_b'].get('synthetic_assets_available', False) else 'No'}\n")
             f.write("========================================================================\n")
